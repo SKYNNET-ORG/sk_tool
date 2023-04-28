@@ -317,7 +317,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes):
 
 
 def main():
-	print(n)
+	'''Procesa el fichero de entrada y genera el de salida'''
 	sk_file = create_new_file(file)
 	index_pragmas,sk_trees,init_code,post_sk_codes,skynnet_configs = prepare_sk_file(file)
 	print(skynnet_configs)
