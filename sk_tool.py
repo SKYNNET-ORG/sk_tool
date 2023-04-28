@@ -3,12 +3,25 @@ import sys
 import ply.lex as lex
 import re
 
+#Variables globales
 sk_vars_list = ["_EMBEDDING_","_NEURON_","_CELL_","_EPOCH","_BATCH"]
 sk_functions_list = ['summary','compile','fit','predict']
 sk_creation_model_list = ['Sequential','Model']
 
+
 def get_var_from_list(cadena, lista):
-	'''Corregir
+	'''Esta funcion se usa para reconocer las variables especificas para capas de neuronas que pedimos que ponga el diseñador
+	Esta funcion recibe un string de una variable y una lista de variables
+	comprueba si las variable pertenece a la cadena, como a veces la variable
+	incluye un _numero para indicar el numero de la capa en la que esta, primero lo separa, para asegurar que la variable sin numero es una de las de la lista que nos interesan
+
+	Devuelve una tupla (terna): 
+	- True o False: Si la variable es de las de la lista
+	- La nombre de la variable sin en numero
+	- El numero de la variable, que puede ser:
+		- n, un numero entero
+		- 0, si la variable no tiene numero
+		- -1 si la variable no era de la lista
 	'''
 	#Separo el numero con er y tengo var y numero (si hay)
 	hay_num = re.search(r'\d+',cadena) 
@@ -29,20 +42,22 @@ def get_var_from_list(cadena, lista):
 			return False,sk_var,-1
 
 class TransformAssignSkVars(ast.NodeTransformer):
+	'''Esta clase es la que se usa para detectar de forma automatica las variables de las 
+	redes neuronales y reducir el valor que se les da para adecuarlas a las respectivas subredes
+	por ejemplo: _NEURON_3 = 100 ------->  _NEURON_3 = 50, si se divide en dos subredes'''
 
 	def __init__(self,reduccion=1, num_redes=1):
-		self.reduccion = reduccion
-		self.num_redes = num_redes
+		self.reduccion = reduccion #Indica por cuanto hay que dividir el valor de la asignacion
+		self.num_redes = num_redes #No se usa. DELETE
 
 	def visit_Assign(self, node):
-		'''
+		'''Esta funcion es la que divide por un numero entero las variables de skynnet
 		'''
 		try:
 			variable_valida =  (len(node.targets) == 1 and isinstance(node.targets[0], ast.Name) and node.value)
 			variable_skynnet = get_var_from_list(node.targets[0].id, sk_vars_list)[0]==True
 			if variable_valida and variable_skynnet:
 				new_value = ast.Constant(value=node.value.value//self.reduccion)
-				#node.value = new_value
 				new_node = ast.Assign(targets=node.targets, value=new_value, lineno = node.lineno)
 				return new_node
 			else:
@@ -54,22 +69,20 @@ class TransformAssignSkVars(ast.NodeTransformer):
 			return node
 
 class RemoveAssignSkVars(ast.NodeTransformer):
+	'''Esta clase auxiliar se usa para eliminar las invocaciones de skynnet una vez las has escrito reducidas,
+	no te hace falta escribir _NEURON_1 = 40 las 4 veces que hagas una subred '''
 
 	def __init__(self,reduccion=1, num_redes=1):
 		self.reduccion = reduccion
 		self.num_redes = num_redes
 
 	def visit_Assign(self, node):
-		'''
-		'''
 		try:
 			variable_valida =  (len(node.targets) == 1 and isinstance(node.targets[0], ast.Name) and node.value)
 			variable_skynnet = get_var_from_list(node.targets[0].id, sk_vars_list)[0]==True
 			if variable_valida and variable_skynnet:
-				pass
+				pass #En este caso no devolvemos el nodo, porque es de skynnet y ya se ha escrito una vez
 			else:
-				# Si no es una asignación de un solo objetivo con un valor, simplemente devuelve el nodo original sin modificarlo
-				#print("Nodo erroneo", node.targets[0].id)
 				ast.fix_missing_locations(node)
 				return node
 		except Exception as error:
@@ -78,7 +91,9 @@ class RemoveAssignSkVars(ast.NodeTransformer):
 			return node
 
 class VisitSkFunctionsAssign(ast.NodeVisitor):
-
+	'''Esta clase es la que permite obtener las asignaciones que se usan para crear modelos en skynnet,
+	ya sea con el modelo normal o funcional. Ademas prepara el diccionario que tendra un resumen de los nodos
+	para las funciones summary, creation, compile, fit, si añadimos alguna funcion nueva se añade al diccionario de forma automatica en otra clase'''
 	def __init__(self):
 		#self.lista_modelos = []
 		self.dict_modelos = {}
@@ -101,15 +116,16 @@ class VisitSkFunctionsAssign(ast.NodeVisitor):
 			llamada = node.value
 			if self.get_sk_model_creation(ast.unparse(llamada)):
 				model_name = node.targets[0].id
-				#print(node.targets[0].id)
-				#self.lista_modelos.append(model_name)
+				#Diccionario TODO: Puedo quitar summary, compile y fit, ya que se añaden automaticamente en la clase VisitSkFunctionCalls
 				self.dict_modelos[model_name] = {'creation': node,
 												'summary': None,
 												'compile': None,
 												'fit': None}
 
 class VisitSkFunctionsCalls(ast.NodeVisitor):
-
+	'''Al igual que la clase que visita las asignaciones, esta clase sirve para visitar las invocaciones, de tipo model.algo
+	esta funcion "algo", tiene que ser una de la lista de funciones skynnet que hay en la variable global. Una vez la encuentra la guarda 
+	en el diccionario'''
 	def __init__(self,dict_modelos):
 		#self.lista_modelos = lista_modelos
 		self.dict_modelos = dict_modelos
@@ -124,7 +140,9 @@ class VisitSkFunctionsCalls(ast.NodeVisitor):
 
 
 class TransformModelName(ast.NodeTransformer):
-
+	'''Esta clase es la que implementa los metodos de visita necesarios para cambiar automaticamente los nombres de modelo
+	a cada submodelo, se visitan las asignaciones (creacion), las invocaciones (model.funcion), y los returns por si metes
+	una funcionalidad en un metodo y devuelves el modelo'''
 	def __init__(self,dict_modelos, number):
 		self.dict_modelos = dict_modelos
 		self.number = number
@@ -153,6 +171,7 @@ class TransformModelName(ast.NodeTransformer):
 		return node
 
 	def visit_Call(self,node):
+		#TODO: con expresiones regulares, o con el ast cambiar las invocaciones a los datos, por las que definimos en skynnet DEBATIR ESTO
 		if isinstance(node.func, ast.Attribute) and node.func.attr in sk_functions_list:
 			aux_func_id = re.sub(r"_[0-9]+", "", node.func.value.id)
 			if isinstance(node.func.value, ast.Name) and aux_func_id in self.dict_modelos.keys():
@@ -172,6 +191,8 @@ class TransformModelName(ast.NodeTransformer):
 		return node
 
 def create_new_file(file):
+	'''Esta funcion, crea el fichero que vamos a devolver con la herramient sk_tool
+	Es un fichero con el mismo nombre pero precedido de "sk_"'''
 	if file.find(".py") == -1:
 		sk_file = "sk_"+file+".py"
 	else:
@@ -180,9 +201,11 @@ def create_new_file(file):
 	return sk_file
 
 def get_skynnet_atributes(cadena):
-	##SKYNNET:BEGIN_[REGRESSION|MULTICLASS|BINARYCLASS]_[ACC]_[LOSS]
+	'''Esta funcion crea un diccionario que analiza la etiqueta de Skynnet
+	y almacena el tipo de red y las opciones que permite, para luego calcular la
+	reduccion de capas en cada caso'''
 	skynnet_config = {}
-	t_skynnet =r'^(#)?(SKYNNET:BEGIN_)?(REGRESSION|MULTICLASS|BINARYCLASS)?(_ACC|_LOSS|_ACC_LOSS)?$'
+	t_skynnet =r'(#)?(SKYNNET:BEGIN_)?(REGRESSION|MULTICLASS|BINARYCLASS)?(_ACC|_LOSS|_ACC_LOSS)?$'
 	coincidencias = re.findall(t_skynnet,cadena)
 	if len(coincidencias)==0:
 		return skynnet_config
@@ -198,12 +221,13 @@ def prepare_sk_file(file):
 	''' Esta funcion coge el fichero fuente, y apunta los indices de inicio y fin de 
 	todas las parejas de etiquetas skynnet, ademas de guardar todo el codigo fente
 	de skynnet que habrá que duplicar 
-	'''
-	'''
-	TODO: Expresiones regulares para los parametros de skynnet
-		Seguramente implique devolver un campo mas para conocer la etiqueta
-		Comprobar que las parejas de begin end sean pares, y siempre menor begin que end
-		mismo numero de arboles que de pares begin end 
+	Se almacena:
+	-El codigo de inicio (antes de la etiqueta)
+	-El codigo de skynnet (entre etiquetas)
+	-El codigo de finalizacion (despues de la etiqueta end)
+
+	Se permite que haya varias parejas de etiquetas skynnet, por eso los codigos de skynnet y finalizacion
+	son listas
 	'''
 
 	index_pragmas = []
@@ -254,15 +278,22 @@ def prepare_sk_file(file):
 
 
 def process_skynnet_code(code, skynnet_config, fout, num_subredes):
+	'''En esta funcion se aplican las transformaciones sobre el arbol de sintaxis de python
+	que se han definido en las correspondientes clases
+	1- Se reducen las variables de skynnet
+	2- Se escribe el codigo skynnet con los valores reducidos por el numero de subrredes. Se incluye el modelo numero 0
+	3- Al codigo que se ha escrito, se le quitan las variables skynnet, para no repetirlas n veces
+	4- Se almacenan las asignaciones en las que se crean ls modelos
+	5- Se almacenan las invocaciones que se aplican a los modelos
+	6- Se indica el diccionario con la info recabada en los pasos 4 y 5
+	7- Se reescriben el resto de modelos con los nombres cambiados, si el nombre original es model, ahora sera model_n'''
 	#Primero se reducen las variables por n y se escriben
 	ast_code = ast.parse(code)
 	node_data_vars_reduced = TransformAssignSkVars(num_subredes).visit(ast_code)
-	#print(ast.unparse(node_data_vars_reduced))
 	fout.write(ast.unparse(node_data_vars_reduced))
 	fout.write('\n\n')
 	#una vez escrito, eliminar los nodos de las asignaciones que coincidan #WARNING Las asignaciones del user se repetiran, pero no las toco nunca
 	node_no_data_vars = RemoveAssignSkVars().visit(node_data_vars_reduced)
-	#fout.write(ast.unparse(node_no_data_vars))
 	#==========================================
 	#Luego se escribe el resto retocando las invocaciones
 	#visito asignaciones
@@ -274,6 +305,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes):
 	#ahora puedo escribir como quiera el codigo
 	sk_dict = invocations.dict_modelos
 	print(sk_dict)
+	print("Work in progress: Analizar la coherencia del diccionario, que esten todos los nodos al menos")
 	#sk_dict contiene todos los nodos de las funciones que busco
 	#==========================================
 	#ahora escribo el codigo linea a linea, comparando cada nodo por si esta en el diccionario, si esta en el diccionario le cambio el nombre al modelo
@@ -282,22 +314,14 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes):
 		TransformModelName(sk_dict,model_number).visit(node_no_data_vars)
 		fout.write(ast.unparse(node_no_data_vars))
 		fout.write('\n\n')
-			
 
-	pass
 
 def main():
 	print(n)
 	sk_file = create_new_file(file)
 	index_pragmas,sk_trees,init_code,post_sk_codes,skynnet_configs = prepare_sk_file(file)
-	'''print(index_pragmas)
-	print("=================")
-	print(sk_trees)
-	print("=================")
-	print(init_code)
-	print("=================")
-	print(post_sk_codes)'''
 	print(skynnet_configs)
+	print("Work in progress: Con los parametros de la configuracion, hacer las operaciones necesarias para sacar el valor de reduccion de cada subred")
 	with open(sk_file,'w') as fo:
 		for tree_number,indexes in enumerate(index_pragmas):
 			#escribo el principio
