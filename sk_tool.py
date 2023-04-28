@@ -130,7 +130,7 @@ class TransformModelName(ast.NodeTransformer):
 		self.number = number
 
 	@staticmethod
-	def get_sk_model_creation(llamada):
+	def get_sk_model_creation(llamada):#Esta funcion se eliminara, porque se hace mejor con el dict.keys()
 		for function in sk_creation_model_list:
 			if function in llamada:
 				return True
@@ -153,7 +153,6 @@ class TransformModelName(ast.NodeTransformer):
 		return node
 
 	def visit_Call(self,node):
-
 		if isinstance(node.func, ast.Attribute) and node.func.attr in sk_functions_list:
 			aux_func_id = re.sub(r"_[0-9]+", "", node.func.value.id)
 			if isinstance(node.func.value, ast.Name) and aux_func_id in self.dict_modelos.keys():
@@ -162,6 +161,14 @@ class TransformModelName(ast.NodeTransformer):
 				node.func.value.id += '_'+str(self.number)
 				return node
 		self.generic_visit(node)
+		return node
+
+	def visit_Return(self,node):
+		if isinstance(node.value, ast.Name):
+			aux_func_id = re.sub(r"_[0-9]+", "", node.value.id)
+			if aux_func_id in self.dict_modelos.keys():
+				node.value.id = re.sub(r"_[0-9]+", "", node.value.id)
+				node.value.id += '_'+str(self.number)
 		return node
 
 def create_new_file(file):

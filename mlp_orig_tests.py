@@ -30,6 +30,8 @@ def crea_modelo():
 crea_modelo()
 print(model.summary())
 print("bonito sumario")
+model = 43
+model.hola()
 model.compile(optimizer='adam',
               loss='sparse_categorical_crossentropy',
               metrics=['accuracy'])
