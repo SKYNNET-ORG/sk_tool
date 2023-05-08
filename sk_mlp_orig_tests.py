@@ -23,6 +23,7 @@ print(model.summary())
 print('bonito sumario')
 model = 43
 model.hola()
+calculanumeropi()
 model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 model.fit(x_train, y_train, validation_split=0.3, epochs=2)
 predicted = model.predict(x_test)
@@ -38,6 +39,7 @@ print(model_1.summary())
 print('bonito sumario')
 model = 43
 model.hola()
+calculanumeropi()
 model_1.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 model_1.fit(x_train, y_train, validation_split=0.3, epochs=2)
 predicted = model_1.predict(x_test)
@@ -45,14 +47,15 @@ predicted = model_1.predict(x_test)
 _DATA_TRAIN = (x_train, y_train)
 _DATA_TEST = (x_test, y_test)
 
-def crea_modelo():
+def crea_modelo_2():
     model_2 = tf.keras.models.Sequential([tf.keras.layers.Flatten(input_shape=(28, 28)), tf.keras.layers.Dense(_NEURON_1, activation='relu'), tf.keras.layers.Dense(_NEURON_2, activation='relu'), tf.keras.layers.Dense(_NEURON_3, activation='softmax')])
     return model_2
-crea_modelo()
+crea_modelo_2()
 print(model_2.summary())
 print('bonito sumario')
 model = 43
 model.hola()
+calculanumeropi()
 model_2.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 model_2.fit(x_train, y_train, validation_split=0.3, epochs=2)
 predicted = model_2.predict(x_test)
@@ -60,7 +63,7 @@ predicted = model_2.predict(x_test)
 _DATA_TRAIN = (x_train, y_train)
 _DATA_TEST = (x_test, y_test)
 
-def crea_modelo():
+def crea_modelo_3():
     model_3 = tf.keras.models.Sequential([tf.keras.layers.Flatten(input_shape=(28, 28)), tf.keras.layers.Dense(_NEURON_1, activation='relu'), tf.keras.layers.Dense(_NEURON_2, activation='relu'), tf.keras.layers.Dense(_NEURON_3, activation='softmax')])
     return model_3
 crea_modelo()
@@ -68,6 +71,7 @@ print(model_3.summary())
 print('bonito sumario')
 model = 43
 model.hola()
+calculanumeropi()
 model_3.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 model_3.fit(x_train, y_train, validation_split=0.3, epochs=2)
 predicted = model_3.predict(x_test)

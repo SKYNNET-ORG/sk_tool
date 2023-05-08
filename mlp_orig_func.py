@@ -8,7 +8,7 @@ mnist = tf.keras.datasets.mnist
 x_train, x_test = x_train / 255.0, x_test / 255.0
 
 
-  #SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
+#SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
 
 _DATA_TRAIN =(x_train,y_train)
 #_DATA_VAL=(x_val,y_val) En este caso, se usa un validation split

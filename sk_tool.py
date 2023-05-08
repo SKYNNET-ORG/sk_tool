@@ -1,7 +1,8 @@
 import ast
 import sys
-import ply.lex as lex
 import re
+#from ast_comments import *
+import ast_comments
 
 #Variables globales
 sk_vars_list = ["_EMBEDDING_","_NEURON_","_CELL_","_EPOCH","_BATCH"]
@@ -70,7 +71,8 @@ class TransformAssignSkVars(ast.NodeTransformer):
 
 class RemoveAssignSkVars(ast.NodeTransformer):
 	'''Esta clase auxiliar se usa para eliminar las invocaciones de skynnet una vez las has escrito reducidas,
-	no te hace falta escribir _NEURON_1 = 40 las 4 veces que hagas una subred '''
+	no te hace falta escribir _NEURON_1 = 40 las 4 veces que hagas una subred 
+	NO NECESARIA EN LA V1.0'''
 
 	def __init__(self,reduccion=1, num_redes=1):
 		self.reduccion = reduccion
@@ -277,7 +279,7 @@ def prepare_sk_file(file):
 	return(index_pragmas, sk_trees,init_code,post_sk_codes,skynnet_configs)
 
 
-def process_skynnet_code(code, skynnet_config, fout, num_subredes):
+def process_skynnet_code_v00(code, skynnet_config, fout, num_subredes):
 	'''En esta funcion se aplican las transformaciones sobre el arbol de sintaxis de python
 	que se han definido en las correspondientes clases
 	1- Se reducen las variables de skynnet
@@ -316,11 +318,90 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes):
 		fout.write('\n\n')
 
 
+def process_skynnet_code(code, skynnet_config, fout, num_subredes, model_number):
+	'''En esta funcion se aplican las transformaciones sobre el arbol de sintaxis de python
+	que se han definido en las correspondientes clases
+	1- Se reducen las variables de skynnet
+	2- Se almacenan las asignaciones en las que se crean los modelos
+	3- Se almacenan las invocaciones que se aplican a los modelos
+	4- Se indica el diccionario con la info recabada en los pasos 2 y 3
+	5- Se crean las etiquetas de cloudbook necesarias para escribir la funcion skynnet
+	Extra: Se añade el model number, porque puede haber varios modelos en un script'''
+	#Primero se reducen las variables por n y se escriben
+	ast_code = ast.parse(code)
+	node_data_vars_reduced = TransformAssignSkVars(num_subredes).visit(ast_code)
+	#==========================================
+	#Luego se escribe el resto retocando las invocaciones
+	#visito asignaciones
+	assignations = VisitSkFunctionsAssign()
+	assignations.visit(node_data_vars_reduced)
+	#visito invocaciones de tipo atributo, o "de metodo"
+	invocations = VisitSkFunctionsCalls(assignations.dict_modelos)
+	invocations.visit(node_data_vars_reduced)
+	#ahora puedo escribir como quiera el codigo
+	sk_dict = invocations.dict_modelos
+	print(sk_dict)
+	print("Work in progress: Analizar la coherencia del diccionario, que esten todos los nodos al menos")
+	#sk_dict contiene todos los nodos de las funciones que busco
+	#=========================================	
+	func_node = ast.FunctionDef(
+		name="skynnet_block_" + str(model_number),
+		args=ast.arguments(args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
+		body=[node_data_vars_reduced],
+		decorator_list=[]
+	)
+	nodos_skynnet = []
+	nonshared_declaration = ast_comments.Comment(value = "\n#__CLOUDBOOK:NONSHARED__\n")
+	nodos_skynnet.append(nonshared_declaration)
+	for model_name in sk_dict.keys():
+		nombre_variable = model_name
+		nombre = ast.Name(id=nombre_variable, ctx=ast.Store())
+		valor = ast.NameConstant(value=None)
+		model_name_declaration = ast.Assign(targets=[nombre], value=valor)
+		nodos_skynnet.append(model_name_declaration)
+	parallel_declaration =  ast_comments.Comment(value = "\n#__CLOUDBOOK:PARALLEL__\n")
+	nodos_skynnet.append(parallel_declaration)
+	nodos_skynnet.append(func_node)
+	for i in nodos_skynnet:
+		ast.fix_missing_locations(i)
+		if isinstance(i,ast_comments.Comment):
+			fout.write(ast_comments.unparse(i))
+		fout.write(ast.unparse(i))
+	fout.write('\n\n')
+
+def write_sk_model_invocation_code(model_number):
+	'''Escribe la funcion con el bucle, va en la du_0
+	#DU_0
+	def skynnet_global_n():
+	  for i in subredes:
+	    assign_unique_id(i) #y filtrar datos 
+	    #en la herramienta no hace nada
+	  for i in subredes:
+	    skynnet()
+	    #cloudbook:sync
+	TODO: El predicted'''
+	nodos_ast = []
+	#creo nodo de comentario, y de funcion, y con el cuerpo, como es por defecto, lo puedo hacer con texto y parsearlo. y hacerle un fix missing locations o algo asi
+
+	pass
+
+def write_sk_global_code(number_of_sk_functions):
+	'''escribo un if name al final del fichero que invoca a las funciones de cada modelo necesarias, solo invocaciones, las definciones en 
+	la funcion sk_model_code. Esta invocacion debería ir en la du_0
+	if name = main:
+		skynnet_global_0()
+		skynnet_global_n()
+		predicted_1 = bla bla'''
+	# es hacer el if, y las invocaciones, casi se puede escribir como texto que se puede parsear y hacerle un fix missing locations o algo asi
+	pass
+
+
 def main():
 	'''Procesa el fichero de entrada y genera el de salida'''
 	sk_file = create_new_file(file)
 	index_pragmas,sk_trees,init_code,post_sk_codes,skynnet_configs = prepare_sk_file(file)
 	print(skynnet_configs)
+	num_sk_blocks = len(skynnet_configs) #Cuantos bloques skynnet hay
 	print("Work in progress: Con los parametros de la configuracion, hacer las operaciones necesarias para sacar el valor de reduccion de cada subred")
 	with open(sk_file,'w') as fo:
 		for tree_number,indexes in enumerate(index_pragmas):
@@ -329,9 +410,12 @@ def main():
 			#escribo skynnet
 			#fo.write(sk_trees[tree_number])
 			code = sk_trees[tree_number]
-			process_skynnet_code(code, skynnet_configs[tree_number], fo, n)
+			process_skynnet_code(code, skynnet_configs[tree_number], fo, n,tree_number)
 			#escribo el final
 			fo.write(post_sk_codes[tree_number])
+			#Escribo en "main" la llamada al modelo
+			write_sk_model_invocation_code(tree_number)
+		write_sk_global_code(num_sk_blocks)
 
 if __name__=="__main__":
 	if len(sys.argv)!=3:
