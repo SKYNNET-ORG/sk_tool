@@ -9,6 +9,7 @@ sk_vars_list = ["_EMBEDDING_","_NEURON_","_CELL_","_EPOCH","_BATCH"]
 sk_functions_list = ['summary','compile','fit','predict']
 sk_creation_model_list = ['Sequential','Model']
 
+num_subredes = 0
 
 def get_var_from_list(cadena, lista):
 	'''Esta funcion se usa para reconocer las variables especificas para capas de neuronas que pedimos que ponga el diseñador
@@ -369,31 +370,84 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, model_number)
 		fout.write(ast.unparse(i))
 	fout.write('\n\n')
 
-def write_sk_model_invocation_code(model_number):
+def write_sk_model_invocation_code(block_number,fo):
 	'''Escribe la funcion con el bucle, va en la du_0
 	#DU_0
 	def skynnet_global_n():
 	  for i in subredes:
-	    assign_unique_id(i) #y filtrar datos 
-	    #en la herramienta no hace nada
+		assign_unique_id(i) #y filtrar datos 
+		#en la herramienta no hace nada
 	  for i in subredes:
-	    skynnet()
-	    #cloudbook:sync
+		skynnet()
+		#cloudbook:sync
 	TODO: El predicted'''
 	nodos_ast = []
 	#creo nodo de comentario, y de funcion, y con el cuerpo, como es por defecto, lo puedo hacer con texto y parsearlo. y hacerle un fix missing locations o algo asi
+	comment_du0 = ast_comments.Comment(value = "\n#__CLOUDBOOK:DU0__\n")
+	#hago el parametro subredes del bucle for
+	range_call = ast.Call(
+        func=ast.Name(id='range', ctx=ast.Load()),
+        args=[ast.Num(num_subredes)],
+        keywords=[],
+    )
+	#llamada a funcion skynnet_block_n
+	skynnet_call = ast.Expr(
+		value=ast.Call(
+			func=ast.Name(id='skynnet_block_'+str(block_number), ctx=ast.Load()),
+			args=[],
+			keywords=[],
+		)
+	)
+	#bucle for
+	for_loop = ast.For(
+		target=ast.Name(id='i', ctx=ast.Store()),
+		iter=range_call,
+		body=[skynnet_call],
+		orelse=[],
+	)
+	#comentario sync
+	comment_sync = ast_comments.Comment(value = "\n\t\t#__CLOUDBOOK:SYNC__\n")
+	#funcion
+	func_def = ast.FunctionDef(
+		name=f'skynnet_global_{block_number}',
+		args=ast.arguments(args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
+		body=[for_loop],
+		decorator_list=[],
+		returns=None,
+	)
+	
+	nodos_ast = [comment_du0,func_def,comment_sync]
+	for i in nodos_ast:
+		if isinstance(i,ast_comments.Comment):
+			ast_comments.fix_missing_locations(i)
+			fo.write(ast_comments.unparse(i))
+		ast.fix_missing_locations(i)
+		fo.write(ast.unparse(i))
 
-	pass
 
-def write_sk_global_code(number_of_sk_functions):
+def write_sk_global_code(number_of_sk_functions,fo):
 	'''escribo un if name al final del fichero que invoca a las funciones de cada modelo necesarias, solo invocaciones, las definciones en 
 	la funcion sk_model_code. Esta invocacion debería ir en la du_0
 	if name = main:
 		skynnet_global_0()
 		skynnet_global_n()
 		predicted_1 = bla bla'''
-	# es hacer el if, y las invocaciones, casi se puede escribir como texto que se puede parsear y hacerle un fix missing locations o algo asi
-	pass
+	
+	# Creamos una lista de nombres de función con el patrón "skynnet_global_{i}"
+	func_names = [f"skynnet_global_{i}" for i in range(number_of_sk_functions)]
+
+	# Creamos una lista de llamadas a función con los nombres generados y los índices del 0 a n
+	func_calls = [ast.Call(func=ast.Name(id=name, ctx=ast.Load()), args=[], keywords=[]) for name in func_names]
+
+	# Creamos un bloque if __name__ == "__main__" que contiene todas las llamadas a función generadas
+	main_block = ast.If(
+	    test=ast.Compare(left=ast.Name("__name__", ast.Load()), ops=[ast.Eq()], comparators=[ast.Str("__main__")]),
+	    body=[ast.Expr(value=call) for call in func_calls],
+	    orelse=[]
+	)
+
+	ast.fix_missing_locations(main_block)
+	fo.write(ast.unparse(main_block))
 
 
 def main():
@@ -414,8 +468,10 @@ def main():
 			#escribo el final
 			fo.write(post_sk_codes[tree_number])
 			#Escribo en "main" la llamada al modelo
-			write_sk_model_invocation_code(tree_number)
-		write_sk_global_code(num_sk_blocks)
+			fo.write("\n\n")
+			write_sk_model_invocation_code(tree_number,fo)
+		fo.write("\n\n")
+		write_sk_global_code(num_sk_blocks,fo)
 
 if __name__=="__main__":
 	if len(sys.argv)!=3:
@@ -427,6 +483,7 @@ if __name__=="__main__":
 		if file.find(".py") == -1:
 			file = file+".py"
 		print("Fichero: {} en {} subredes".format(file,n))
+		num_subredes = n
 		main()
 
 
