@@ -16,9 +16,9 @@ model = None
 def skynnet_block_0():
     _DATA_TRAIN = (x_train, y_train)
     _DATA_TEST = (x_test, y_test)
-    _NEURON_1 = 128
-    _NEURON_2 = 60
-    _NEURON_3 = 10
+    _NEURON_1 = 64
+    _NEURON_2 = 30
+    _NEURON_3 = 5
     model = tf.keras.models.Sequential([tf.keras.layers.Flatten(input_shape=(28, 28)), tf.keras.layers.Dense(_NEURON_1, activation='relu'), tf.keras.layers.Dense(_NEURON_2, activation='relu'), tf.keras.layers.Dense(_NEURON_3, activation='softmax')])
     print(model.summary())
     model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
@@ -33,10 +33,11 @@ print("End of program")
 
 #__CLOUDBOOK:DU0__
 def skynnet_global_0():
-    for i in range(4):
+    for i in range(2):
         skynnet_block_0()
 		#__CLOUDBOOK:SYNC__
 
 
 if __name__ == '__main__':
     skynnet_global_0()
+

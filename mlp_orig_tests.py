@@ -15,6 +15,7 @@ _DATA_TEST=(x_test,y_test)
 _NEURON_1 = 128
 _NEURON_2 = 60
 _NEURON_3 = 10
+_EPOCHS = 2
 
 #Modelo normal
 def crea_modelo():
@@ -33,7 +34,7 @@ model.compile(optimizer='adam',
               metrics=['accuracy'])
 
 
-model.fit(x_train, y_train, validation_split=0.3, epochs=2)
+model.fit(x_train, y_train, validation_split=0.3, epochs=_EPOCHS)
 
 
 predicted = model.predict(x_test)
@@ -41,4 +42,67 @@ predicted = model.predict(x_test)
 
 #SKYNNET:END
 
-print("End of program")
+print("End of program 1")
+
+#SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
+_DATA_TRAIN =(x_train,y_train)
+#_DATA_VAL=(x_val,y_val) En este caso, se usa un validation split
+_DATA_TEST=(x_test,y_test)
+_NEURON_1 = 128
+_NEURON_2 = 60
+_NEURON_3 = 10
+_EPOCHS = 2
+
+#Modelo normal
+def crea_modelo():
+  model = tf.keras.models.Sequential([
+  tf.keras.layers.Flatten(input_shape=(28, 28)),
+  tf.keras.layers.Dense(_NEURON_1, activation='relu'),
+  tf.keras.layers.Dense(_NEURON_2, activation='relu'),
+  tf.keras.layers.Dense(_NEURON_3, activation='softmax')])
+  return model 
+
+model = crea_modelo()
+print(model.summary())
+print("bonito sumario")
+model.compile(optimizer='adam',
+              loss='sparse_categorical_crossentropy',
+              metrics=['accuracy'])
+
+
+model.fit(x_train, y_train, validation_split=0.3, epochs=_EPOCHS)
+
+
+predicted = model.predict(x_test)
+
+_DATA_TRAIN =(x_train,y_train)
+#_DATA_VAL=(x_val,y_val) En este caso, se usa un validation split
+_DATA_TEST=(x_test,y_test)
+_NEURON_1 = 128
+_NEURON_2 = 60
+_NEURON_3 = 10
+_EPOCHS = 2
+
+#Modelo normal
+model2 = tf.keras.models.Sequential([
+  tf.keras.layers.Flatten(input_shape=(28, 28)),
+  tf.keras.layers.Dense(_NEURON_1, activation='relu'),
+  tf.keras.layers.Dense(_NEURON_2, activation='relu'),
+  tf.keras.layers.Dense(_NEURON_3, activation='softmax')
+])
+
+print(model2.summary())
+
+model2.compile(optimizer='adam',
+              loss='sparse_categorical_crossentropy',
+              metrics=['accuracy'])
+
+
+model2.fit(x_train, y_train, validation_split=0.3, epochs=_EPOCHS)
+
+
+predicted = model2.predict(x_test)
+
+#SKYNNET:END
+
+print("End of program 2")
