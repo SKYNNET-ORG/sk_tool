@@ -16,6 +16,7 @@ _DATA_TEST=(x_test,y_test)
 _NEURON_1 = 128
 _NEURON_2 = 60
 _NEURON_3 = 10
+_EPOCHS = 2
 
 #Modelo normal
 model = tf.keras.models.Sequential([
@@ -32,7 +33,7 @@ model.compile(optimizer='adam',
               metrics=['accuracy'])
 
 
-model.fit(x_train, y_train, validation_split=0.3, epochs=2)
+model.fit(x_train, y_train, validation_split=0.3, epochs=_EPOCHS)
 
 
 predicted = model.predict(x_test)
