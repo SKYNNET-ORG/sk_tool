@@ -250,6 +250,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
 		global_predictions_declarations.append(global_pred_expr)
 	fixed_predictions = map(lambda x: unparse(fix_missing_locations(x)), global_predictions_declarations)
 	fout.writelines(fixed_predictions)
+	#TODO Ver si merece la pena llamarlo como el nombre del modelo en lugar de un indice, por si hay varios ficheros con bloques SKYNNET
 	#=========================================
 	#Escribo las variables nonshared que son las de los modelos = None
 	nonshared_models_declarations = []
@@ -265,76 +266,76 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
 	fout.writelines(fixed_nonshared)
 	#=========================================
 	#Escribo la funcion skynnet block, que tiene todos los modelos del bloque
+	#TODO meter un global model_nombre en el body de la funcion
 	parallel_cloudbook_label = Expr(value=Comment(value='#__CLOUDBOOK:PARALLEL__'))
-	#parallel_cloudbook_label = Comment(value='#__CLOUDBOOK:PARALLEL__')
 	fout.write(unparse(fix_missing_locations(parallel_cloudbook_label)))
-	func_node = ast.FunctionDef(
+	func_node = FunctionDef(
 		name="skynnet_block_" + str(block_number),
-		args=ast.arguments(args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
+		args=arguments(args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
 		body=[node_data_vars_reduced],
 		decorator_list=[]
 	)
-	#func_node_expr = Expr(value=func_node)
+	for model_name in sk_dict.keys():
+		global_node = Global(names=[model_name])
+		func_node.body.insert(0,global_node)
 	fout.write("\n")#Para evitar que el func_node se escriba en la misma linea que el comentario
 	fout.write(unparse(fix_missing_locations(func_node)))
 	#=========================================
 	#Ahora hay que escribir la funcion de la prediccion, parallel y todo eso
-	#=========================================
-	'''#Aqui escribo la prediccion
-	fout.write(ast_comments.unparse(parallel_declaration))
-	# Crear el nodo Global
-	global_node = ast.Global(names=['predictions'])
-	pred_func_node = ast.FunctionDef(
+	fout.write(unparse(fix_missing_locations(parallel_cloudbook_label)))
+	#cuerpo de la funcion: global predictions
+	prediction_vars = []
+	for model_number in range(number_of_models):
+		prediction_vars.append(f"predictions_{block_number}_{model_number}")
+	global_predictions_vars = []
+	for prediction in prediction_vars:
+		global_predictions_vars.append(Global(names=[prediction]))
+	model_vars = []
+	for model_name in sk_dict.keys():
+		model_vars.append(Global(names=[model_name]))
+	#fix_missing_locations(global_prediction_vars)
+	#beginremove endremove
+	#beginremove_cloudbook_label=Expr(value=Comment(value='#__CLOUDBOOK:BEGINREMOVE__'))
+	beginremove_cloudbook_label=Comment(value='#__CLOUDBOOK:BEGINREMOVE__')
+	cloudbook_var = Subscript(
+	    value=Subscript(
+	        value=Name(id="__CLOUDBOOK__", ctx=Load()),
+	        slice=Index(value=Str(s="agent")),
+	        ctx=Load()
+	    ),
+	    slice=Index(value=Str(s="id")),
+	    ctx=Store()
+	)
+	value = Str(s="agente_skynnet")
+	cloudbook_var_assig = Assign(targets=[cloudbook_var], value=value)
+	#endremove_cloudbook_label=Expr(value=Comment(value='#__CLOUDBOOK:ENDREMOVE__'))
+	endremove_cloudbook_label=Comment(value='#__CLOUDBOOK:ENDREMOVE__')
+	label_var = Name(id="label",ctx=Load())
+	assignation_cb_dict = Assign(targets=[label_var], value=cloudbook_var)
+	predictions_assignements = []
+	for i,model_name in enumerate(sk_dict.keys()):
+		nombre = prediction_vars[i]
+		valor = sk_dict[model_name]['predict']
+		prediction_var_target = Subscript(
+			value=Name(id=nombre,ctx=Load()),
+			slice=Index(value=label_var)
+			)
+		prediction_assignment = Assign(targets=[prediction_var_target], value=valor)
+		fix_missing_locations(prediction_assignment)
+		#print(unparse(prediction_assignment))
+		predictions_assignements.append(prediction_assignment)
+	#crear la funcion y meterle lo anterior en el body
+	pred_func_node = FunctionDef(
 		name="skynnet_prediction_block_" + str(block_number),
-		args=ast.arguments(args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
-		body=[global_node],
+		args=arguments(args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
+		body=[global_predictions_vars,model_vars, beginremove_cloudbook_label,cloudbook_var_assig, endremove_cloudbook_label,assignation_cb_dict, predictions_assignements],
 		decorator_list=[]
 	)
-	ast.fix_missing_locations(pred_func_node)
-	fout.write(ast.unparse(pred_func_node))
-	beginremove_comment = ast_comments.Comment(value = "\n    #__CLOUDBOOK:BEGINREMOVE__\n")
-	endremove_comment = ast_comments.Comment(value = "\n    #__CLOUDBOOK:ENDREMOVE__\n")
-	# Crear el nodo de asignación
-	target = ast.Subscript(
-	    value=ast.Subscript(
-	        value=ast.Name(id="__CLOUDBOOK__", ctx=ast.Load()),
-	        slice=ast.Index(value=ast.Str(s="agent")),
-	        ctx=ast.Load()
-	    ),
-	    slice=ast.Index(value=ast.Str(s="id")),
-	    ctx=ast.Store()
-	)
-	# Crear el nodo de valor
-	value = ast.Str(s="agente_skynnet")
-	# Crear el nodo de asignación completa
-	cloudbook_var_assig = ast.Assign(targets=[target], value=value)
-	ast.fix_missing_locations(cloudbook_var_assig)
-	fout.write(ast_comments.unparse(beginremove_comment))
-	if (pred_func_node.col_offset == 0):
-		fout.write("    ")
-	fout.write(ast.unparse(cloudbook_var_assig))
-	fout.write(ast_comments.unparse(endremove_comment))
-	if (pred_func_node.col_offset == 0):
-		fout.write("    ")
-	# Crear el nodo Name con el nombre 'predictions'
-	predictions_node = ast.Name(id='predictions', ctx=ast.Store())
-
-	# Crear el nodo Name con el nombre 'label'
-	label_node = ast.Name(id='label', ctx=ast.Load())
-
-	# Crear el nodo Subscript con el objetivo predictions[label]
-	subscript_node = ast.Subscript(value=predictions_node, slice=ast.Index(value=label_node), ctx=ast.Store())
-
-	# Crear el nodo Name con el nombre 'cosa'
-	cosa_node = ast.Name(id='cosa', ctx=ast.Load())
-
-	# Crear el nodo Assign con el objetivo predictions[label] y el valor cosa
-	prediction_assign_node = ast.Assign(targets=[subscript_node], value=prediction_node.value)
-	ast.fix_missing_locations(prediction_assign_node)
-	fout.write(ast.unparse(prediction_assign_node))
+	fout.write("\n")
+	fout.write(unparse(fix_missing_locations(pred_func_node)))
 
 
-	fout.write('\n\n')'''
+	fout.write('\n\n')
 
 def write_sk_model_invocation_code(block_number,fo):
 	'''Escribe la funcion con el bucle, va en la du_0

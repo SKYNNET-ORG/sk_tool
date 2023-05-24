@@ -14,8 +14,8 @@ predictions_0_0 = {}
 #__CLOUDBOOK:NONSHARED__
 model = None
 #__CLOUDBOOK:PARALLEL__
-
 def skynnet_block_0():
+    global model
     _DATA_TRAIN = (x_train, y_train)
     _DATA_TEST = (x_test, y_test)
     _NEURON_1 = 32
@@ -31,6 +31,17 @@ def skynnet_block_0():
     print('bonito sumario')
     model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
     model.fit(x_train, y_train, validation_split=0.3, epochs=_EPOCHS)
+#__CLOUDBOOK:PARALLEL__
+def skynnet_prediction_block_0():
+    global predictions_0_0
+    global model
+    #__CLOUDBOOK:BEGINREMOVE__
+    __CLOUDBOOK__['agent']['id'] = 'agente_skynnet'
+    #__CLOUDBOOK:ENDREMOVE__
+    label = __CLOUDBOOK__['agent']['id']
+    predictions_0_0[label] = model.predict(x_test)
+
+
 #SKYNNET:END
 
 print("End of program 1")
@@ -45,8 +56,9 @@ predictions_1_1 = {}
 model = None
 model2 = None
 #__CLOUDBOOK:PARALLEL__
-
 def skynnet_block_1():
+    global model2
+    global model
     _DATA_TRAIN = (x_train, y_train)
     _DATA_TEST = (x_test, y_test)
     _NEURON_1 = 32
@@ -72,6 +84,20 @@ def skynnet_block_1():
     print(model2.summary())
     model2.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
     model2.fit(x_train, y_train, validation_split=0.3, epochs=_EPOCHS)
+#__CLOUDBOOK:PARALLEL__
+def skynnet_prediction_block_1():
+    global predictions_1_0
+    global predictions_1_1
+    global model
+    global model2
+    #__CLOUDBOOK:BEGINREMOVE__
+    __CLOUDBOOK__['agent']['id'] = 'agente_skynnet'
+    #__CLOUDBOOK:ENDREMOVE__
+    label = __CLOUDBOOK__['agent']['id']
+    predictions_1_0[label] = model.predict(x_test)
+    predictions_1_1[label] = model2.predict(x_test)
+
+
 #SKYNNET:END
 
 print("End of program 2")
