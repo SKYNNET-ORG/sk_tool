@@ -9,6 +9,7 @@ x_train, x_test = x_train / 255.0, x_test / 255.0
 
 
 #SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
+
 #__CLOUDBOOK:GLOBAL__
 predictions_0_0 = {}
 #__CLOUDBOOK:NONSHARED__
@@ -48,6 +49,17 @@ print("End of program 1")
 
 #SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
 
+
+#__CLOUDBOOK:DU0__
+def skynnet_global_0():
+    for i in range(4):
+        skynnet_block_0()
+    #__CLOUDBOOK:SYNC__
+#__CLOUDBOOK:DU0__
+def skynnet_prediction_global_0():
+    for i in range(4):
+        skynnet_prediction_block_0()
+    #__CLOUDBOOK:SYNC__
 
 #__CLOUDBOOK:GLOBAL__
 predictions_1_0 = {}
@@ -102,7 +114,25 @@ def skynnet_prediction_block_1():
 
 print("End of program 2")
 
+#__CLOUDBOOK:DU0__
+def skynnet_global_1():
+    for i in range(4):
+        skynnet_block_1()
+    #__CLOUDBOOK:SYNC__
+#__CLOUDBOOK:DU0__
+def skynnet_prediction_global_1():
+    for i in range(4):
+        skynnet_prediction_block_1()
+    #__CLOUDBOOK:SYNC__
 
 
+#__CLOUDBOOK:MAIN__
+def main():
+    skynnet_global_0()
+    skynnet_prediction_global_0()
+    skynnet_global_1()
+    skynnet_prediction_global_1()
 
+if __name__ == '__main__':
+    main()
 

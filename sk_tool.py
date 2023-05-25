@@ -240,7 +240,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
 	#Escribo las variables globales, una por modelo que haya en el bloque
 	number_of_models = len(sk_dict)
 	global_predictions_declarations = []
-	global_cloudbook_label = Comment(value='#__CLOUDBOOK:GLOBAL__')
+	global_cloudbook_label = Expr(value=Comment(value='#__CLOUDBOOK:GLOBAL__'))
 	global_predictions_declarations.append(global_cloudbook_label)
 	for model_number in range(number_of_models):
 		global_pred_assignment = Assign(targets=[ast.Name(id=f"predictions_{block_number}_{model_number}", ctx=ast.Store())],  # El objetivo de la asignación es el nombre "predictions"
@@ -266,7 +266,6 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
 	fout.writelines(fixed_nonshared)
 	#=========================================
 	#Escribo la funcion skynnet block, que tiene todos los modelos del bloque
-	#TODO meter un global model_nombre en el body de la funcion
 	parallel_cloudbook_label = Expr(value=Comment(value='#__CLOUDBOOK:PARALLEL__'))
 	fout.write(unparse(fix_missing_locations(parallel_cloudbook_label)))
 	func_node = FunctionDef(
@@ -297,6 +296,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
 	#beginremove endremove
 	#beginremove_cloudbook_label=Expr(value=Comment(value='#__CLOUDBOOK:BEGINREMOVE__'))
 	beginremove_cloudbook_label=Comment(value='#__CLOUDBOOK:BEGINREMOVE__')
+	cloudbook_var_prepare = ast.parse("__CLOUDBOOK__ = {}\n__CLOUDBOOK__['agent'] = {}")
 	cloudbook_var = Subscript(
 	    value=Subscript(
 	        value=Name(id="__CLOUDBOOK__", ctx=Load()),
@@ -328,7 +328,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
 	pred_func_node = FunctionDef(
 		name="skynnet_prediction_block_" + str(block_number),
 		args=arguments(args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
-		body=[global_predictions_vars,model_vars, beginremove_cloudbook_label,cloudbook_var_assig, endremove_cloudbook_label,assignation_cb_dict, predictions_assignements],
+		body=[global_predictions_vars,model_vars, beginremove_cloudbook_label,cloudbook_var_prepare,cloudbook_var_assig, endremove_cloudbook_label,assignation_cb_dict, predictions_assignements],
 		decorator_list=[]
 	)
 	fout.write("\n")
@@ -337,7 +337,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
 
 	fout.write('\n\n')
 
-def write_sk_model_invocation_code(block_number,fo):
+def write_sk_block_invocation_code(block_number,fo):
 	'''Escribe la funcion con el bucle, va en la du_0
 	#DU_0
 	def skynnet_global_n():
@@ -347,49 +347,73 @@ def write_sk_model_invocation_code(block_number,fo):
 	  for i in subredes:
 		skynnet()
 		#cloudbook:sync
-	TODO: El predicted'''
+	TODO: El predicted, sera otra funcion de du0 que hace un bucle llamando 
+	a las predicted y luego hace global predicted y return de ese predicted'''
 	nodos_ast = []
 	#creo nodo de comentario, y de funcion, y con el cuerpo, como es por defecto, lo puedo hacer con texto y parsearlo. y hacerle un fix missing locations o algo asi
-	comment_du0 = ast_comments.Comment(value = "\n#__CLOUDBOOK:DU0__\n")
+	comment_du0 = Comment(value = "#__CLOUDBOOK:DU0__")
+	fo.write(unparse(fix_missing_locations(comment_du0)))
+	fo.write("\n")
 	#hago el parametro subredes del bucle for
-	range_call = ast.Call(
-        func=ast.Name(id='range', ctx=ast.Load()),
-        args=[ast.Num(num_subredes)],
+	range_call = Call(
+        func=Name(id='range', ctx=Load()),
+        args=[Num(num_subredes)],
         keywords=[],
     )
 	#llamada a funcion skynnet_block_n
-	skynnet_call = ast.Expr(
-		value=ast.Call(
-			func=ast.Name(id='skynnet_block_'+str(block_number), ctx=ast.Load()),
+	skynnet_call = Expr(
+		value=Call(
+			func=Name(id='skynnet_block_'+str(block_number), ctx=Load()),
 			args=[],
 			keywords=[],
 		)
 	)
 	#bucle for
-	for_loop = ast.For(
-		target=ast.Name(id='i', ctx=ast.Store()),
+	for_loop = For(
+		target=Name(id='i', ctx=Store()),
 		iter=range_call,
 		body=[skynnet_call],
 		orelse=[],
 	)
 	#comentario sync
-	comment_sync = ast_comments.Comment(value = "\n    #__CLOUDBOOK:SYNC__\n")
+	comment_sync = Comment(value = "#__CLOUDBOOK:SYNC__")
 	#funcion
-	func_def = ast.FunctionDef(
+	func_def = FunctionDef(
 		name=f'skynnet_global_{block_number}',
-		args=ast.arguments(args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
-		body=[for_loop],
+		args=arguments(args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
+		body=[for_loop,comment_sync],
 		decorator_list=[],
 		returns=None,
 	)
-	
-	nodos_ast = [comment_du0,func_def,comment_sync]
-	for i in nodos_ast:
-		if isinstance(i,ast_comments.Comment):
-			ast_comments.fix_missing_locations(i)
-			fo.write(ast_comments.unparse(i))
-		ast.fix_missing_locations(i)
-		fo.write(ast.unparse(i))
+	fo.write(unparse(fix_missing_locations(func_def)))
+	fo.write("\n")
+	#=====================================================
+	fo.write(unparse(fix_missing_locations(comment_du0)))
+	fo.write("\n")
+	skynnet_pred_call = Expr(
+		value=Call(
+			func=Name(id='skynnet_prediction_block_'+str(block_number), ctx=Load()),
+			args=[],
+			keywords=[],
+		)
+	)
+	#bucle for
+	for_pred_loop = For(
+		target=Name(id='i', ctx=Store()),
+		iter=range_call,
+		body=[skynnet_pred_call],
+		orelse=[],
+	)
+	#funcion
+	func_pred_def = FunctionDef(
+		name=f'skynnet_prediction_global_{block_number}',
+		args=arguments(args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
+		body=[for_pred_loop,comment_sync],
+		decorator_list=[],
+		returns=None,
+	)
+	fo.write(unparse(fix_missing_locations(func_pred_def)))
+	fo.write("\n")
 
 
 def write_sk_global_code(number_of_sk_functions,fo):
@@ -402,41 +426,40 @@ def write_sk_global_code(number_of_sk_functions,fo):
 	
 	# Creamos una lista de nombres de función con el patrón "skynnet_global_{i}"
 	func_names = [f"skynnet_global_{i}" for i in range(number_of_sk_functions)]
-
+	func_pred_names = [f"skynnet_prediction_global_{i}" for i in range(number_of_sk_functions)]
 	# Creamos una lista de llamadas a función con los nombres generados y los índices del 0 a n
-	func_calls = [ast.Call(func=ast.Name(id=name, ctx=ast.Load()), args=[], keywords=[]) for name in func_names]
+	func_calls = [Call(func=Name(id=name, ctx=ast.Load()), args=[], keywords=[]) for name in func_names]
+	func_pred_calls = [Call(func=Name(id=name, ctx=ast.Load()), args=[], keywords=[]) for name in func_pred_names]
 
-	# Creamos un bloque if __name__ == "__main__" que contiene todas las llamadas a función generadas
-	#main_block = ast.If(
-	#    test=ast.Compare(left=ast.Name("__name__", ast.Load()), ops=[ast.Eq()], comparators=[ast.Str("__main__")]),
-	#    body=[ast.Expr(value=call) for call in func_calls],
-	#    orelse=[]
-	#)
+	
 	#Hacemos una funcion cloudbook main, primero la etiqueta y luego la funcion
-	comment_main = ast_comments.Comment(value = "\n#__CLOUDBOOK:MAIN__\n")
-	fo.write(ast_comments.unparse(comment_main))
+	comment_main = Comment(value = "#__CLOUDBOOK:MAIN__")
+	fo.write(unparse(fix_missing_locations(comment_main)))
+	fo.write("\n")
 	#funcion
-	main_def = ast.FunctionDef(
+	main_def = FunctionDef(
 		name="main",
-		args=ast.arguments(args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
-		body=[ast.Expr(value=call) for call in func_calls],
+		args=arguments(args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
+		body=[],#Expr(value=call) for call in func_calls],
 		decorator_list=[],
 		returns=None,
 	)
-
-	ast.fix_missing_locations(main_def)
-	fo.write(ast.unparse(main_def))
+	for call in range(number_of_sk_functions):
+		main_def.body.append(Expr(value=func_calls[call]))
+		main_def.body.append(Expr(value=func_pred_calls[call]))
+	fix_missing_locations(main_def)
+	fo.write(unparse(main_def))
 	fo.write('\n\n')
 	# Creamos un bloque if __name__ == "__main__" que contiene todas las llamadas a función generadas
 	# Creamos una llamada a la función main()
-	main_call = ast.Call(func=ast.Name(id="main", ctx=ast.Load()), args=[], keywords=[])
-	main_block = ast.If(
-	    test=ast.Compare(left=ast.Name("__name__", ast.Load()), ops=[ast.Eq()], comparators=[ast.Str("__main__")]),
-	    body=[ast.Expr(value=main_call)],
+	main_call = Call(func=Name(id="main", ctx=Load()), args=[], keywords=[])
+	main_block = If(
+	    test=Compare(left=Name("__name__", Load()), ops=[Eq()], comparators=[Str("__main__")]),
+	    body=[Expr(value=main_call)],
 	    orelse=[]
 	)
-	ast.fix_missing_locations(main_block)
-	fo.write(ast.unparse(main_block))
+	fix_missing_locations(main_block)
+	fo.write(unparse(main_block))
 
 
 def main():
@@ -455,10 +478,10 @@ def main():
 			fo.write(post_sk_codes[block_number])
 			fo.write("\n\n")
 			#Escribo la llamada a los modelos del bloque
-			#write_sk_model_invocation_code(block_number,fo)
+			write_sk_block_invocation_code(block_number,fo)
 		fo.write("\n\n")
 		#Escribo la llamada a todos los bloques
-		#write_sk_global_code(num_sk_blocks,fo)
+		write_sk_global_code(num_sk_blocks,fo)
 		fo.write("\n\n")
 
 if __name__=="__main__":

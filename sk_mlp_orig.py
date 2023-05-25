@@ -9,6 +9,7 @@ x_train, x_test = x_train / 255.0, x_test / 255.0
 
 
 #SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
+
 #__CLOUDBOOK:GLOBAL__
 predictions_0_0 = {}
 #__CLOUDBOOK:NONSHARED__
@@ -31,6 +32,8 @@ def skynnet_prediction_block_0():
     global predictions_0_0
     global model
     #__CLOUDBOOK:BEGINREMOVE__
+    __CLOUDBOOK__ = {}
+    __CLOUDBOOK__['agent'] = {}
     __CLOUDBOOK__['agent']['id'] = 'agente_skynnet'
     #__CLOUDBOOK:ENDREMOVE__
     label = __CLOUDBOOK__['agent']['id']
@@ -41,7 +44,23 @@ def skynnet_prediction_block_0():
 
 print("End of program")
 
+#__CLOUDBOOK:DU0__
+def skynnet_global_0():
+    for i in range(4):
+        skynnet_block_0()
+    #__CLOUDBOOK:SYNC__
+#__CLOUDBOOK:DU0__
+def skynnet_prediction_global_0():
+    for i in range(4):
+        skynnet_prediction_block_0()
+    #__CLOUDBOOK:SYNC__
 
 
+#__CLOUDBOOK:MAIN__
+def main():
+    skynnet_global_0()
+    skynnet_prediction_global_0()
 
+if __name__ == '__main__':
+    main()
 
