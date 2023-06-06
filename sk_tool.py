@@ -127,6 +127,22 @@ class RemovePredictionNode(ast.NodeTransformer):
 		else:
 			return node
 
+class ModelArrayTransform(ast.NodeTransformer):
+	'''Esta clase es para cambiar los modelos por arrays de modelos, 
+	cambia todas las apariciones del modelo'''
+	def __init__(self, model_name):
+		self.model_name = model_name
+
+	def visit_Name(self, node):
+		if node.id == self.model_name:
+			return ast.Subscript(
+				value=ast.Name(id= self.model_name, ctx=ast.Load()),
+				slice=ast.Index(value=ast.Name(id='i', ctx=ast.Load())),
+				ctx=node.ctx
+			)		
+		return node#self.generic_visit(node)
+
+
 def create_new_file(file):
 	'''Esta funcion, crea el fichero que vamos a devolver con la herramient sk_tool
 	Es un fichero con el mismo nombre pero precedido de "sk_"'''
@@ -233,6 +249,10 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
 	print(sk_dict)
 	#sk_dict contiene todos los nodos de las funciones que busco
 	#=========================================
+	#Aqui cambiamos model por model[i]: PROBLEM: A cambiarlo aqui, cambio el predict, y no lo elimina luego, mejor cambiarlo en cada funcion
+	#for model_name in sk_dict.keys():
+	#	ModelArrayTransform(model_name).visit(node_data_vars_reduced)
+	#=========================================
 	#Quito la prediccion y la guardo para meterla en una funcion nueva
 	predictions =  RemovePredictionNode(sk_dict)
 	node_data_vars_reduced = predictions.visit(node_data_vars_reduced)
@@ -244,7 +264,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
 	global_predictions_declarations.append(global_cloudbook_label)
 	for model_number in range(number_of_models):
 		global_pred_assignment = Assign(targets=[ast.Name(id=f"predictions_{block_number}_{model_number}", ctx=ast.Store())],  # El objetivo de la asignación es el nombre "predictions"
-    							value=ast.Dict(keys=[], values=[]),  # El valor asignado es un diccionario vacío {}
+								value=ast.Dict(keys=[], values=[]),  # El valor asignado es un diccionario vacío {}
 								)
 		global_pred_expr = Expr(value=global_pred_assignment)
 		global_predictions_declarations.append(global_pred_expr)
@@ -258,7 +278,8 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
 	nonshared_models_declarations.append(nonshared_cloudbook_label)
 	for model_name in sk_dict.keys():
 		nombre = ast.Name(id=model_name, ctx=ast.Store())
-		valor = ast.NameConstant(value=None)
+		#valor = ast.NameConstant(value=None) #Esto era cuando no teniamos array de modelos
+		valor = ast.List(elts=[], ctx=ast.Load())
 		model_name_declaration = ast.Assign(targets=[nombre], value=valor)
 		model_name_expression = ast.Expr(value = model_name_declaration) #Como expresion para que separe las asignaciones en lineas distintas
 		nonshared_models_declarations.append(model_name_expression)
@@ -268,16 +289,25 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
 	#Escribo la funcion skynnet block, que tiene todos los modelos del bloque
 	parallel_cloudbook_label = Expr(value=Comment(value='#__CLOUDBOOK:PARALLEL__'))
 	fout.write(unparse(fix_missing_locations(parallel_cloudbook_label)))
+	#Aqui cambiamos los model por model[i]
+	for model_name in sk_dict.keys():
+		ModelArrayTransform(model_name).visit(node_data_vars_reduced)
 	func_node = FunctionDef(
 		name="skynnet_block_" + str(block_number),
-		args=arguments(args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
+		args=arguments(args=[ast.arg(arg='i', annotation=None)], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
 		body=[node_data_vars_reduced],
 		decorator_list=[]
 	)
 	for model_name in sk_dict.keys():
 		global_node = Global(names=[model_name])
 		func_node.body.insert(0,global_node)
+		#Ademas de llamar a global hay que hacer model.append(None) para permitir los arrays
+		append_node = ast.parse(model_name+".append(None)")
+		func_node.body.insert(1,append_node)
 	fout.write("\n")#Para evitar que el func_node se escriba en la misma linea que el comentario
+	#Aqui cambiamos model por model[i]
+	'''for model_name in sk_dict.keys():
+		ModelArrayTransform(model_name).visit(func_node)'''
 	fout.write(unparse(fix_missing_locations(func_node)))
 	#=========================================
 	#Ahora hay que escribir la funcion de la prediccion, parallel y todo eso
@@ -298,24 +328,36 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
 	beginremove_cloudbook_label=Comment(value='#__CLOUDBOOK:BEGINREMOVE__')
 	cloudbook_var_prepare = ast.parse("__CLOUDBOOK__ = {}\n__CLOUDBOOK__['agent'] = {}")
 	cloudbook_var = Subscript(
-	    value=Subscript(
-	        value=Name(id="__CLOUDBOOK__", ctx=Load()),
-	        slice=Index(value=Str(s="agent")),
-	        ctx=Load()
-	    ),
-	    slice=Index(value=Str(s="id")),
-	    ctx=Store()
+		value=Subscript(
+			value=Name(id="__CLOUDBOOK__", ctx=Load()),
+			slice=Index(value=Str(s="agent")),
+			ctx=Load()
+		),
+		slice=Index(value=Str(s="id")),
+		ctx=Store()
 	)
 	value = Str(s="agente_skynnet")
 	cloudbook_var_assig = Assign(targets=[cloudbook_var], value=value)
 	#endremove_cloudbook_label=Expr(value=Comment(value='#__CLOUDBOOK:ENDREMOVE__'))
 	endremove_cloudbook_label=Comment(value='#__CLOUDBOOK:ENDREMOVE__')
 	label_var = Name(id="label",ctx=Load())
-	assignation_cb_dict = Assign(targets=[label_var], value=cloudbook_var)
+	#Para permitir varios modelos por agente tengo que añadir str(i) al label
+	#assignation_cb_dict = Assign(targets=[label_var], value=cloudbook_var)
+	value=ast.BinOp(
+		left=cloudbook_var,     # Variable adios
+		op=ast.Add(),                                  # Operador de suma
+		right=ast.Call(
+			func=ast.Name(id='str', ctx=ast.Load()),    # Función str
+			args=[ast.Name(id='i', ctx=ast.Load())],    # Argumento i
+			keywords=[]
+		)
+	)
+	assignation_cb_dict = Assign(targets=[label_var], value=value)
 	predictions_assignements = []
 	for i,model_name in enumerate(sk_dict.keys()):
 		nombre = prediction_vars[i]
-		valor = sk_dict[model_name]['predict']
+		#valor = sk_dict[model_name]['predict']
+		valor = ModelArrayTransform(model_name).visit(sk_dict[model_name]['predict']) #Ahora cambia por array de modelos
 		prediction_var_target = Subscript(
 			value=Name(id=nombre,ctx=Load()),
 			slice=Index(value=label_var)
@@ -327,7 +369,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
 	#crear la funcion y meterle lo anterior en el body
 	pred_func_node = FunctionDef(
 		name="skynnet_prediction_block_" + str(block_number),
-		args=arguments(args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
+		args=arguments(args=[ast.arg(arg='i', annotation=None)], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
 		body=[global_predictions_vars,model_vars, beginremove_cloudbook_label,cloudbook_var_prepare,cloudbook_var_assig, endremove_cloudbook_label,assignation_cb_dict, predictions_assignements],
 		decorator_list=[]
 	)
@@ -356,15 +398,15 @@ def write_sk_block_invocation_code(block_number,fo):
 	fo.write("\n")
 	#hago el parametro subredes del bucle for
 	range_call = Call(
-        func=Name(id='range', ctx=Load()),
-        args=[Num(num_subredes)],
-        keywords=[],
-    )
+		func=Name(id='range', ctx=Load()),
+		args=[Num(num_subredes)],
+		keywords=[],
+	)
 	#llamada a funcion skynnet_block_n
 	skynnet_call = Expr(
 		value=Call(
 			func=Name(id='skynnet_block_'+str(block_number), ctx=Load()),
-			args=[],
+			args=[ast.arg(arg='i', annotation=None)],
 			keywords=[],
 		)
 	)
@@ -393,7 +435,7 @@ def write_sk_block_invocation_code(block_number,fo):
 	skynnet_pred_call = Expr(
 		value=Call(
 			func=Name(id='skynnet_prediction_block_'+str(block_number), ctx=Load()),
-			args=[],
+			args=[ast.arg(arg='i', annotation=None)],
 			keywords=[],
 		)
 	)
@@ -454,9 +496,9 @@ def write_sk_global_code(number_of_sk_functions,fo):
 	# Creamos una llamada a la función main()
 	main_call = Call(func=Name(id="main", ctx=Load()), args=[], keywords=[])
 	main_block = If(
-	    test=Compare(left=Name("__name__", Load()), ops=[Eq()], comparators=[Str("__main__")]),
-	    body=[Expr(value=main_call)],
-	    orelse=[]
+		test=Compare(left=Name("__name__", Load()), ops=[Eq()], comparators=[Str("__main__")]),
+		body=[Expr(value=main_call)],
+		orelse=[]
 	)
 	fix_missing_locations(main_block)
 	fo.write(unparse(main_block))

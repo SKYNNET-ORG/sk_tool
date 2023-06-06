@@ -7,7 +7,6 @@ mnist = tf.keras.datasets.mnist
 #Noramalize the pixel values by deviding each pixel by 255
 x_train, x_test = x_train / 255.0, x_test / 255.0
 
-
 #SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
 
 _DATA_TRAIN =(x_train,y_train)

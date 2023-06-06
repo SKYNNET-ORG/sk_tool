@@ -20,7 +20,8 @@ _NEURON_3 = 10
 
 #Modelo funcional
 inputs = tf.keras.Input(shape=(28,28))
-x = tf.keras.layers.Dense(_NEURON_1, activation='relu')(inputs)
+x = tf.keras.layers.Flatten()(inputs)
+x = tf.keras.layers.Dense(_NEURON_1, activation='relu')(x)
 x = tf.keras.layers.Dense(_NEURON_2, activation='relu')(x)
 outputs =  tf.keras.layers.Dense(_NEURON_3, activation='softmax')(x)
 model = tf.keras.Model(inputs=inputs, outputs=outputs)

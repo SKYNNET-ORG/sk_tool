@@ -7,28 +7,32 @@ mnist = tf.keras.datasets.mnist
 #Noramalize the pixel values by deviding each pixel by 255
 x_train, x_test = x_train / 255.0, x_test / 255.0
 
+
 #SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
 
 #__CLOUDBOOK:GLOBAL__
 predictions_0_0 = {}
 #__CLOUDBOOK:NONSHARED__
-model = []
+model = None
 #__CLOUDBOOK:PARALLEL__
-def skynnet_block_0(i):
+def skynnet_block_0():
     global model
-    model.append(None)
     _DATA_TRAIN = (x_train, y_train)
     _DATA_TEST = (x_test, y_test)
-    _NEURON_1 = 64
-    _NEURON_2 = 30
-    _NEURON_3 = 5
-    _EPOCHS = 1
-    model[i] = tf.keras.models.Sequential([tf.keras.layers.Flatten(input_shape=(28, 28)), tf.keras.layers.Dense(_NEURON_1, activation='relu'), tf.keras.layers.Dense(_NEURON_2, activation='relu'), tf.keras.layers.Dense(_NEURON_3, activation='softmax')])
-    print(model[i].summary())
-    model[i].compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-    model[i].fit(x_train, y_train, validation_split=0.3, epochs=_EPOCHS)
+    _NEURON_1 = 128
+    _NEURON_2 = 60
+    _NEURON_3 = 10
+    inputs = tf.keras.Input(shape=(28, 28))
+    x = tf.keras.layers.Flatten()(inputs)
+    x = tf.keras.layers.Dense(_NEURON_1, activation='relu')(x)
+    x = tf.keras.layers.Dense(_NEURON_2, activation='relu')(x)
+    outputs = tf.keras.layers.Dense(_NEURON_3, activation='softmax')(x)
+    model = tf.keras.Model(inputs=inputs, outputs=outputs)
+    print(model.summary())
+    model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+    model.fit(x_train, y_train, validation_split=0.3, epochs=2)
 #__CLOUDBOOK:PARALLEL__
-def skynnet_prediction_block_0(i):
+def skynnet_prediction_block_0():
     global predictions_0_0
     global model
     #__CLOUDBOOK:BEGINREMOVE__
@@ -36,8 +40,8 @@ def skynnet_prediction_block_0(i):
     __CLOUDBOOK__['agent'] = {}
     __CLOUDBOOK__['agent']['id'] = 'agente_skynnet'
     #__CLOUDBOOK:ENDREMOVE__
-    label = __CLOUDBOOK__['agent']['id'] + str(i)
-    predictions_0_0[label] = model[i].predict(x_test)
+    label = __CLOUDBOOK__['agent']['id']
+    predictions_0_0[label] = model.predict(x_test)
 
 
 #SKYNNET:END
@@ -47,12 +51,12 @@ print("End of program")
 #__CLOUDBOOK:DU0__
 def skynnet_global_0():
     for i in range(2):
-        skynnet_block_0(i)
+        skynnet_block_0()
     #__CLOUDBOOK:SYNC__
 #__CLOUDBOOK:DU0__
 def skynnet_prediction_global_0():
     for i in range(2):
-        skynnet_prediction_block_0(i)
+        skynnet_prediction_block_0()
     #__CLOUDBOOK:SYNC__
 
 
