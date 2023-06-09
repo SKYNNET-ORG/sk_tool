@@ -2,6 +2,7 @@ from ast import *
 import sys
 import re
 from ast_comments import *
+from math import comb,ceil
 
 
 #Variables globales
@@ -19,7 +20,7 @@ def get_var_from_list(cadena, lista):
 
 	Devuelve una tupla (terna): 
 	- True o False: Si la variable es de las de la lista
-	- La nombre de la variable sin en numero
+	- El nombre de la variable sin el numero
 	- El numero de la variable, que puede ser:
 		- n, un numero entero
 		- 0, si la variable no tiene numero
@@ -54,19 +55,23 @@ class TransformAssignSkVars(ast.NodeTransformer):
 	def visit_Assign(self, node):
 		'''Esta funcion es la que divide por un numero entero las variables de skynnet
 		'''
-		try:
-			variable_valida =  (len(node.targets) == 1 and isinstance(node.targets[0], ast.Name) and node.value)
-			variable_skynnet = get_var_from_list(node.targets[0].id, sk_vars_list)[0]==True
-			if variable_valida and variable_skynnet:
-				new_value = ast.Constant(value=node.value.value//self.reduccion)
-				new_node = ast.Assign(targets=node.targets, value=new_value, lineno = node.lineno)
-				return new_node
+		if len(node.targets)==1:
+			variable_valida =  isinstance(node.targets[0], ast.Name) and node.value
+			if variable_valida:
+				variable_skynnet = get_var_from_list(node.targets[0].id, sk_vars_list)[0]==True
+				if variable_valida and variable_skynnet:
+					new_value = ast.Constant(value=node.value.value//self.reduccion)
+					if new_value.value == 0:
+						print(f"WARNING: Deconstruction on variable {node.targets[0].id} is gonna be reduced to 0")
+					new_node = ast.Assign(targets=node.targets, value=new_value, lineno = node.lineno)
+					return new_node
+				else:
+					# Si no es una asignación de un solo objetivo con un valor, simplemente devuelve el nodo original sin modificarlo
+					#print("Nodo erroneo", node.targets[0].id)
+					return node
 			else:
-				# Si no es una asignación de un solo objetivo con un valor, simplemente devuelve el nodo original sin modificarlo
-				#print("Nodo erroneo", node.targets[0].id)
 				return node
-		except Exception as error:
-			print("Nodo erroneo",error, node.targets[0].id)
+		else:
 			return node
 
 class VisitModelFunctions(ast.NodeVisitor):
@@ -142,6 +147,26 @@ class ModelArrayTransform(ast.NodeTransformer):
 			)		
 		return node#self.generic_visit(node)
 
+
+class VisitLastNeuron(ast.NodeVisitor):
+	'''Esta clase es para obtener el numero de categorias en las que se clasifica
+	TODO: Mezclar esta clase con la que reduce los datos'''
+	max_valor = 0
+	n_categorias = 0
+
+	def visit_Assign(self, node):
+		'''Esta funcion es la que divide por un numero entero las variables de skynnet
+		'''
+		variable_valida =  (len(node.targets) == 1 and isinstance(node.targets[0], ast.Name) and node.value)
+		if variable_valida:
+			existe_sk_var,variable_skynnet,valor = get_var_from_list(node.targets[0].id, sk_vars_list)			
+			if existe_sk_var == True and variable_skynnet == '_NEURON_':
+				#print(f"node.value es {node.value.value}")
+				if valor>self.max_valor:
+					self.max_valor = valor
+					self.n_categorias = node.value.value
+
+			
 
 def create_new_file(file):
 	'''Esta funcion, crea el fichero que vamos a devolver con la herramient sk_tool
@@ -227,31 +252,67 @@ def prepare_sk_file(file):
 
 	return(sk_trees,init_code,post_sk_codes,skynnet_configs)
 
+def get_combinacion(a, n):
+    pairs = []
+    r = 2
+    c = comb(n, r)
+    if c == a:
+        pairs.append((n, r))
+    if n > 1:
+        pairs += get_combinacion(a, n - 1)
+    
+    return pairs
+
+def get_categorias(subredes, categorias):
+    results = {}
+    for subred in range(subredes,1,-1):
+        pairs = get_combinacion(subred,categorias)
+        for i in pairs:
+            #results.append(i)
+            results[subred]=i
+    #devuelvo el numero deseado si es posible, o uno menor, para que quede una maquina libre
+    if subredes in results:
+        n_subredes = subredes
+    else:
+        n_subredes = max(results.keys())
+    return n_subredes,results[n_subredes]
 
 def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number):
 	'''En esta funcion se aplican las transformaciones sobre el arbol de sintaxis de python
 	que se han definido en las correspondientes clases
-	1- Se reducen las variables de skynnet
+	1- Se reducen las variables de skynnet. Antes se calculan subredes y divison de datos
 	2- Se almacenan las asignaciones en las que se crean los modelos
 	3- Se almacenan las invocaciones que se aplican a los modelos
 	4- Se indica el diccionario con la info recabada en los pasos 2 y 3
 	5- Se crean las etiquetas de cloudbook necesarias para escribir la funcion skynnet
 	Extra: Se añade el model number, porque puede haber varios modelos en un script'''
-	#Primero se reducen las variables por n y se escriben
+
+	#Primero calculan categorias y se reducen las variables por n y se escriben
 	ast_code = ast.parse(code)
-	node_data_vars_reduced = TransformAssignSkVars(num_subredes).visit(ast_code)
+	#Lo primerisimo es saber las categorias 
+	if skynnet_config['Type'] == 'MULTICLASS':
+		categorias = VisitLastNeuron()
+		categorias.visit(ast_code)
+		n_categorias = categorias.n_categorias
+		print(f"Son {n_categorias} categorias originales")
+		#Se calcula cuantas subredes quedaran
+		num_subredes,combinatorio = get_categorias(num_subredes, n_categorias)
+		print(f"Para formar subredes=C{combinatorio} es decir {combinatorio[0]} categorias tomados de {combinatorio[1]} en {combinatorio[1]}")
+		num_grupos = combinatorio[0]
+		print(f"numero de grupos es {num_grupos}")
+	print(f"El numero de subredes va a ser {num_subredes}")
+	reduccion = ceil(n_categorias/num_subredes)
+	print(f"la reduccion sera por {reduccion}")
+	#Se reducen los datos
+	node_data_vars_reduced = TransformAssignSkVars(reduccion).visit(ast_code)
 	#==========================================
 	#Luego se escribe el resto retocando las invocaciones
 	#visito asignaciones
 	model_functions = VisitModelFunctions()
 	model_functions.visit(node_data_vars_reduced)
 	sk_dict = model_functions.dict_modelos
-	print(sk_dict)
+	#print(sk_dict)
 	#sk_dict contiene todos los nodos de las funciones que busco
-	#=========================================
-	#Aqui cambiamos model por model[i]: PROBLEM: A cambiarlo aqui, cambio el predict, y no lo elimina luego, mejor cambiarlo en cada funcion
-	#for model_name in sk_dict.keys():
-	#	ModelArrayTransform(model_name).visit(node_data_vars_reduced)
 	#=========================================
 	#Quito la prediccion y la guardo para meterla en una funcion nueva
 	predictions =  RemovePredictionNode(sk_dict)
@@ -378,6 +439,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
 
 
 	fout.write('\n\n')
+	return num_subredes
 
 def write_sk_block_invocation_code(block_number,fo):
 	'''Escribe la funcion con el bucle, va en la du_0
@@ -506,6 +568,8 @@ def write_sk_global_code(number_of_sk_functions,fo):
 
 def main():
 	'''Procesa el fichero de entrada y genera el de salida'''
+	global num_subredes
+	print(f"num subredes original {num_subredes}")
 	sk_file = create_new_file(file)
 	sk_trees,init_code,post_sk_codes,skynnet_configs = prepare_sk_file(file)
 	print(skynnet_configs)
@@ -515,7 +579,7 @@ def main():
 		fo.write(init_code)
 		for block_number in range(num_sk_blocks):
 			code = sk_trees[block_number]
-			process_skynnet_code(code, skynnet_configs[block_number], fo, n, block_number)
+			num_subredes = process_skynnet_code(code, skynnet_configs[block_number], fo, n, block_number)
 			#escribo el final
 			fo.write(post_sk_codes[block_number])
 			fo.write("\n\n")

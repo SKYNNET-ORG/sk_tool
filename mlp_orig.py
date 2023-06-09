@@ -1,5 +1,9 @@
 import tensorflow as tf, numpy as np
 import matplotlib.pyplot as plt
+
+
+#SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
+
 # Load MNIST data using built-in datasets download function
 mnist = tf.keras.datasets.mnist
 (x_train, y_train), (x_test, y_test) = mnist.load_data()
@@ -7,15 +11,13 @@ mnist = tf.keras.datasets.mnist
 #Noramalize the pixel values by deviding each pixel by 255
 x_train, x_test = x_train / 255.0, x_test / 255.0
 
-#SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
-
 _DATA_TRAIN =(x_train,y_train)
 #_DATA_VAL=(x_val,y_val) En este caso, se usa un validation split
 _DATA_TEST=(x_test,y_test)
 _NEURON_1 = 128
 _NEURON_2 = 60
 _NEURON_3 = 10
-_EPOCHS = 2
+_EPOCHS = 10
 
 #Modelo normal
 model = tf.keras.models.Sequential([
