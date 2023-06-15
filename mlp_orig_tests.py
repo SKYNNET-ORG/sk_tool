@@ -9,22 +9,23 @@ x_train, x_test = x_train / 255.0, x_test / 255.0
 
 
 #SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
-_DATA_TRAIN =(x_train,y_train)
+_DATA_TRAIN_X =x_train
+_DATA_TRAIN_Y =y_train
 #_DATA_VAL=(x_val,y_val) En este caso, se usa un validation split
-_DATA_TEST=(x_test,y_test)
+_DATA_TEST_X = x_test
+_DATA_TEST_Y = y_test
 _NEURON_1 = 128
 _NEURON_2 = 60
 _NEURON_3 = 10
 _EPOCHS = 2
 
 #Modelo normal
-def crea_modelo():
-  model = tf.keras.models.Sequential([
+
+model = tf.keras.models.Sequential([
   tf.keras.layers.Flatten(input_shape=(28, 28)),
   tf.keras.layers.Dense(_NEURON_1, activation='relu'),
   tf.keras.layers.Dense(_NEURON_2, activation='relu'),
   tf.keras.layers.Dense(_NEURON_3, activation='softmax')])
-  return model 
 
 model = crea_modelo()
 print(model.summary())

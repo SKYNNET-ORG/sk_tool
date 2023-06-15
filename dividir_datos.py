@@ -117,7 +117,7 @@ x_train, x_test = x_train / 255.0, x_test / 255.0
 
 
 
-subredes = 4
+subredes = 7
 categorias = 10
 subredes_def,combinatorio = get_categorias(subredes,categorias)
 print(f"Para {subredes} subredes y {categorias} categorias:")
@@ -135,47 +135,28 @@ for i, array_combinado in enumerate(categorias_subredes_finales):
     print(f"Array combinado {i + 1}: {array_combinado} con {len(np.unique(array_combinado))} categorias {np.unique(array_combinado)}")
 
 print(f"Ahora hay que generar loas arrays correctamente filtrados")
-'''
-train_filter = np.where((y_train <5))
-test_filter = np.where((y_test <5))
 
-x_train_01234, y_train_01234 = x_train[train_filter], y_train[train_filter]
-x_test_01234, y_test_01234 = x_test[test_filter], y_test[test_filter]
-o 
-array_actual = array[np.isin(array, categorias_array_actual)]
-'''
 _DATA_TRAIN =(x_train,y_train)
-#_DATA_VAL=(x_val,y_val) En este caso, se usa un validation split
 _DATA_TEST=(x_test,y_test)
 
 for i in range(subredes_def):
     print(f"Para la subred {i} queremos las categorias {categorias_subredes_finales[i]}")
-    _DATA_TRAIN_X_TEMP = x_train[np.isin(_DATA_TRAIN[1],categorias_subredes_finales[i])]
-    _DATA_TRAIN_Y_TEMP = y_train[np.isin(_DATA_TRAIN[1],categorias_subredes_finales[i])]
+    _DATA_TRAIN_X_TEMP = _DATA_TRAIN[0][np.isin(_DATA_TRAIN[1],combinar_arrays(grupos_de_categorias)[i])]
+    _DATA_TRAIN_Y_TEMP = _DATA_TRAIN[1][np.isin(_DATA_TRAIN[1],categorias_subredes_finales[i])]
     print(len(_DATA_TRAIN_X_TEMP),len(_DATA_TRAIN_Y_TEMP))
     _DATA_TRAIN_TEMP = _DATA_TRAIN_X_TEMP,_DATA_TRAIN_Y_TEMP
 
-'''for i in range(subredes_def):
-    print(f"Para la subred {i} queremos las categorias {categorias_subredes_finales[i]}")
-    x_train_temp = x_train[np.isin(y_train,categorias_subredes_finales[i])]
-    y_train_temp = y_train[np.isin(y_train,categorias_subredes_finales[i])]
-    print(len(x_train_temp),len(y_train_temp))'''
-
-
-'''array_original = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-arrays_destino = dividir_array_categorias(y_train, 10, 4)
-
-for i, array in enumerate(arrays_destino):
-    print(f"Array {i + 1}: {array}, {len(array)}")
-
-array1 = np.array([1, 2, 3, 4])
-array2 = np.array([5, 6, 7, 8])
-array3 = np.array([9, 10, 11, 12])
-array4 = np.array([13, 14, 15, 16])
-
-arrays = [array1, array2, array3, array4]
-
-arrays_combinados = combinar_arrays(arrays)
-
-for i, array_combinado in enumerate(arrays_combinados):
-    print(f"Array combinado {i + 1}: {array_combinado} con categorias {np.unique(array_combinado)}")'''
+'''Para sk_tool copiar esto:
+    grupos_de_categorias = dividir_array_categorias(y_train,10,3)
+    print("================================================")
+    print(f"Para la subred {i} queremos las categorias {combinar_arrays(grupos_de_categorias)[i]}")
+    print(f"Estas son las {len(combinar_arrays(grupos_de_categorias)[i])} categorias que filtramos {combinar_arrays(grupos_de_categorias)[i]}")
+    x_train_temp = x_train[np.isin(y_train,combinar_arrays(grupos_de_categorias)[i])]
+    y_train_temp = y_train[np.isin(y_train,combinar_arrays(grupos_de_categorias)[i])]
+    print(len(x_train_temp),len(y_train_temp))
+    print(np.unique(y_train_temp))
+    _NEURON_3 = len(np.unique(y_train_temp))
+    print(f"la ultima capa tiene {_NEURON_3} categorias")
+    categorias_incluir = np.unique(y_train_temp)
+    etiquetas_consecutivas = np.arange(len(categorias_incluir))
+    y_train_temp = np.searchsorted(categorias_incluir, y_train_temp)'''

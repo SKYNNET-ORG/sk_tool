@@ -12,6 +12,106 @@ sk_creation_model_list = ['Sequential','Model']
 
 num_subredes = 0
 
+funciones_combinatorias='''
+#__CLOUDBOOK:LOCAL__
+def get_combinacion(a, n):
+    from math import comb
+    pairs = []
+    r = 2
+    c = comb(n, r)
+    if c == a:
+        pairs.append((n, r))
+    if n > 1:
+        pairs += get_combinacion(a, n - 1)
+    
+    return pairs
+
+#__CLOUDBOOK:LOCAL__
+def get_categorias(subredes, categorias):
+    results = {}
+    for subred in range(subredes,1,-1):
+        pairs = get_combinacion(subred,categorias)
+        for i in pairs:
+            #results.append(i)
+            results[subred]=i
+    #print(results)
+    #devuelvo el numero deseado si es posible, o uno menor, para que quede una maquina libre
+    if subredes in results:
+        n_subredes = subredes
+    else:
+        n_subredes = max(results.keys())
+
+    return n_subredes,results[n_subredes]
+
+#__CLOUDBOOK:LOCAL__
+def dividir_array_categorias(array, n, m):
+    #n = categorias iniciales
+    #m = numero de arrays resultantes
+    # Obtener las categorias unicas del array original
+    #print(f"Dividiendo un array de {n} categorias en {m} arrays con menos categorias")
+    categorias_unicas = np.unique(array)
+    #print(f"Tenemos {categorias_unicas} categorias unicas")
+    
+    if n < m:
+        raise ValueError("El numero de categorias original (n) debe ser mayor o igual al numero de arrays de destino (m).")
+    
+    if m > len(categorias_unicas):
+        raise ValueError("El numero de categorias unicas no es suficiente para dividirlas en los m arrays deseados.")
+    
+    # Mezclar las categorias unicas de forma aleatoria
+    #np.random.shuffle(categorias_unicas)
+    
+    # Calcular el numero de categorias en cada array de destino
+    categorias_por_array = n // m
+    #print(f"Categorias por array = {categorias_por_array}")
+    
+    # Crear los m arrays de destino
+    arrays_destino = []
+    inicio_categoria = 0
+    
+    for i in range(m):
+        #print(f"Para el subarray {i}")
+        fin_categoria = inicio_categoria + categorias_por_array
+        #print(f"\tCon incicio de categoria = {inicio_categoria} y fin de categoria = {fin_categoria}")
+        
+        if i < n % m:#
+            #print(f"\t\tComo {i} < n({n}) % m({m}), hacemos fin_categoria = {fin_categoria+1}")
+            fin_categoria += 1
+        
+        categorias_array_actual = categorias_unicas[inicio_categoria:fin_categoria]
+        #print(f"\tCategorias array actual = {categorias_array_actual}")
+        # Filtrar el array original para obtener los elementos de las categorias del array actual
+        #array_actual = array[np.isin(array, categorias_array_actual)]
+        #print(f"\tTras filtrar el aaray original para formar array actual queda: {array_actual}")
+        #arrays_destino.append(array_actual)
+        arrays_destino.append(categorias_array_actual)
+        inicio_categoria = fin_categoria
+        #print(f"\tSe mete el array actual en arrays_destino quedando {arrays_destino}")
+        #print(f"\tSe hace inicio_categoria = fin_categoria: {inicio_categoria}={fin_categoria}")
+    return arrays_destino
+
+#__CLOUDBOOK:LOCAL__
+def combinar_arrays(arrays):
+    from itertools import combinations
+    if len(arrays) < 2:
+        raise ValueError("Se requieren al menos dos arrays para realizar la combinacion.")
+    
+    combinaciones = list(combinations(arrays, 2))
+    #print(f"Tenemos una lista con todas las combinaciones de los arrays tomados de 2 en 2: {combinaciones}")
+    
+    arrays_combinados = []
+    
+    for combo in combinaciones:
+        array_1, array_2 = combo
+        
+        # Concatenar los dos arrays en uno solo
+        array_combinado = np.concatenate((array_1, array_2))
+        
+        arrays_combinados.append(array_combinado)
+    
+    return arrays_combinados
+'''
+
 def get_var_from_list(cadena, lista):
 	'''Esta funcion se usa para reconocer las variables especificas para capas de neuronas que pedimos que ponga el diseñador
 	Esta funcion recibe un string de una variable y una lista de variables
@@ -60,7 +160,7 @@ class TransformAssignSkVars(ast.NodeTransformer):
 			if variable_valida:
 				variable_skynnet = get_var_from_list(node.targets[0].id, sk_vars_list)[0]==True
 				if variable_valida and variable_skynnet:
-					new_value = ast.Constant(value=node.value.value//self.reduccion)
+					new_value = ast.Constant(value=(ceil(node.value.value/self.reduccion)))
 					if new_value.value == 0:
 						print(f"WARNING: Deconstruction on variable {node.targets[0].id} is gonna be reduced to 0")
 					new_node = ast.Assign(targets=node.targets, value=new_value, lineno = node.lineno)
@@ -147,7 +247,6 @@ class ModelArrayTransform(ast.NodeTransformer):
 			)		
 		return node#self.generic_visit(node)
 
-
 class VisitLastNeuron(ast.NodeVisitor):
 	'''Esta clase es para obtener el numero de categorias en las que se clasifica
 	TODO: Mezclar esta clase con la que reduce los datos'''
@@ -167,7 +266,6 @@ class VisitLastNeuron(ast.NodeVisitor):
 					self.n_categorias = node.value.value
 
 			
-
 def create_new_file(file):
 	'''Esta funcion, crea el fichero que vamos a devolver con la herramient sk_tool
 	Es un fichero con el mismo nombre pero precedido de "sk_"'''
@@ -290,19 +388,28 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
 	#Primero calculan categorias y se reducen las variables por n y se escriben
 	ast_code = ast.parse(code)
 	#Lo primerisimo es saber las categorias 
+	reduccion = num_subredes
 	if skynnet_config['Type'] == 'MULTICLASS':
-		categorias = VisitLastNeuron()
-		categorias.visit(ast_code)
-		n_categorias = categorias.n_categorias
-		print(f"Son {n_categorias} categorias originales")
+		#categorias: las categorias totales, las de la ultima capa _NEURON
+		#estas categorias se distribuyen en las subredes dividiendose en grupos tomados de dos en dos
+		#grupos: grupos en los que divido las categorias
+		#tomados: 2, porque por defecto se toman de 2 en 2
+		#categorias_subred: la media de categorias que le tocan a una subred (las categorias se meten en grupos, y a cada subred le tocan dos grupos)
+		visit_categorias = VisitLastNeuron()
+		visit_categorias.visit(ast_code)
+		categorias = visit_categorias.n_categorias
+		print(f"Son {categorias} categorias originales")
 		#Se calcula cuantas subredes quedaran
-		num_subredes,combinatorio = get_categorias(num_subredes, n_categorias)
-		print(f"Para formar subredes=C{combinatorio} es decir {combinatorio[0]} categorias tomados de {combinatorio[1]} en {combinatorio[1]}")
-		num_grupos = combinatorio[0]
-		print(f"numero de grupos es {num_grupos}")
-	print(f"El numero de subredes va a ser {num_subredes}")
-	reduccion = ceil(n_categorias/num_subredes)
-	print(f"la reduccion sera por {reduccion}")
+		num_subredes,combinatorio = get_categorias(num_subredes, categorias)
+		grupos = combinatorio[0]
+		tomados = combinatorio[1]
+		print(f"Para formar subredes=C{combinatorio} es decir {grupos} categorias tomados de {tomados} en {tomados}")
+		print(f"numero de grupos es {grupos}")
+		print(f"El numero de subredes va a ser {num_subredes}")
+		categorias_subred = ((categorias/grupos)*tomados)
+		print(f"Categorias por subred: {categorias_subred}")
+		reduccion = (categorias/categorias_subred)
+		print(f"la reduccion sera por {reduccion} esto es por defecto TODO: Ajustar de forma mas fina por cada subred")
 	#Se reducen los datos
 	node_data_vars_reduced = TransformAssignSkVars(reduccion).visit(ast_code)
 	#==========================================
@@ -369,6 +476,30 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
 	#Aqui cambiamos model por model[i]
 	'''for model_name in sk_dict.keys():
 		ModelArrayTransform(model_name).visit(func_node)'''
+	#Meto antes del nodo de creacion del modelo, el codigo para calcular la division de los datos
+	if skynnet_config['Type'] == 'MULTICLASS':
+		division_datos_multiclass = f'''grupos_de_categorias = dividir_array_categorias(_DATA_TRAIN_Y,{categorias},{grupos})
+_DATA_TRAIN_X = _DATA_TRAIN_X[np.isin(_DATA_TRAIN_Y,combinar_arrays(grupos_de_categorias)[i])]
+_DATA_TRAIN_Y = _DATA_TRAIN_Y[np.isin(_DATA_TRAIN_Y,combinar_arrays(grupos_de_categorias)[i])]
+print(len(_DATA_TRAIN_X),len(_DATA_TRAIN_Y))
+print(np.unique(_DATA_TRAIN_Y))
+categorias_incluir = np.unique(_DATA_TRAIN_Y)
+etiquetas_consecutivas = np.arange(len(categorias_incluir))
+_DATA_TRAIN_Y = np.searchsorted(categorias_incluir, _DATA_TRAIN_Y)
+'''
+		#Para cada modelo filtro los datos buscando el nodo de creacion en el ast.module del cuerpo de la funcion
+		#que se que contiene la creacion (esto esta MAL)
+		for model_name in sk_dict.keys():
+			nodo_a_buscar = sk_dict[model_name]["creation"]
+			encontrado = None
+			for i,nodo in enumerate(ast.iter_child_nodes(func_node.body[2])):#TODO generalizar para no usar el 2 con iter_child_nodes recursivo
+				#print(nodo)
+				if nodo == nodo_a_buscar:
+					#print("este")
+					encontrado=i
+			func_node.body[2].body.insert(encontrado,parse(division_datos_multiclass))
+			#func_node.body.insert(3,parse(division_datos_multiclass))
+
 	fout.write(unparse(fix_missing_locations(func_node)))
 	#=========================================
 	#Ahora hay que escribir la funcion de la prediccion, parallel y todo eso
@@ -519,7 +650,6 @@ def write_sk_block_invocation_code(block_number,fo):
 	fo.write(unparse(fix_missing_locations(func_pred_def)))
 	fo.write("\n")
 
-
 def write_sk_global_code(number_of_sk_functions,fo):
 	'''escribo un if name al final del fichero que invoca a las funciones de cada modelo necesarias, solo invocaciones, las definciones en 
 	la funcion sk_model_code. Esta invocacion debería ir en la du_0
@@ -577,6 +707,7 @@ def main():
 	with open(sk_file,'w') as fo:
 		#escribo el principio
 		fo.write(init_code)
+		fo.write(funciones_combinatorias)
 		for block_number in range(num_sk_blocks):
 			code = sk_trees[block_number]
 			num_subredes = process_skynnet_code(code, skynnet_configs[block_number], fo, n, block_number)
