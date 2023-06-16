@@ -140,11 +140,21 @@ def skynnet_prediction_block_0(i):
     global predictions_0_0
     global model
     #__CLOUDBOOK:BEGINREMOVE__
+    _DATA_TEST_X = x_test
+    _DATA_TEST_Y = y_test
     __CLOUDBOOK__ = {}
     __CLOUDBOOK__['agent'] = {}
     __CLOUDBOOK__['agent']['id'] = 'agente_skynnet'
     #__CLOUDBOOK:ENDREMOVE__
     label = __CLOUDBOOK__['agent']['id'] + str(i)
+    grupos_de_categorias = dividir_array_categorias(_DATA_TEST_Y, 10, 3)
+    _DATA_TEST_X = _DATA_TEST_X[np.isin(_DATA_TEST_Y, combinar_arrays(grupos_de_categorias)[i])]
+    _DATA_TEST_Y = _DATA_TEST_Y[np.isin(_DATA_TEST_Y, combinar_arrays(grupos_de_categorias)[i])]
+    print(len(_DATA_TEST_X), len(_DATA_TEST_Y))
+    print(np.unique(_DATA_TEST_Y))
+    categorias_incluir = np.unique(_DATA_TEST_Y)
+    etiquetas_consecutivas = np.arange(len(categorias_incluir))
+    _DATA_TEST_Y = np.searchsorted(categorias_incluir, _DATA_TEST_Y)
     predictions_0_0[label] = model[i].predict(_DATA_TEST_X)
 
 

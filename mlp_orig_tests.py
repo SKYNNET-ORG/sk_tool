@@ -55,15 +55,13 @@ _NEURON_3 = 10
 _EPOCHS = 2
 
 #Modelo normal
-def crea_modelo():
-  model = tf.keras.models.Sequential([
+
+model = tf.keras.models.Sequential([
   tf.keras.layers.Flatten(input_shape=(28, 28)),
   tf.keras.layers.Dense(_NEURON_1, activation='relu'),
   tf.keras.layers.Dense(_NEURON_2, activation='relu'),
   tf.keras.layers.Dense(_NEURON_3, activation='softmax')])
-  return model 
 
-model = crea_modelo()
 print(model.summary())
 print("bonito sumario")
 model.compile(optimizer='adam',

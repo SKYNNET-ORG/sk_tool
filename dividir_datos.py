@@ -160,3 +160,11 @@ for i in range(subredes_def):
     categorias_incluir = np.unique(y_train_temp)
     etiquetas_consecutivas = np.arange(len(categorias_incluir))
     y_train_temp = np.searchsorted(categorias_incluir, y_train_temp)'''
+
+'''Explicaicon de np.searchsorted:
+np.searchsorted([0,1,2,3],[1,2,3,9,3,9,9,3])
+array([1, 2, 3, 4, 3, 4, 4, 3], dtype=int64)
+
+el primer array es de categorias consecutivas (tantas como numeros categorias no consecutivas hay en el segundo array) y mapea 
+el segundo array a las categorias del primero, para poder darle al modelo las categorias consecutivas
+'''
