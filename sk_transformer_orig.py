@@ -1,13 +1,59 @@
-import tensorflow as tf, numpy as np
-import matplotlib.pyplot as plt
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+import time
+import numpy as np
 
-mnist = tf.keras.datasets.mnist
-(x_train, y_train), (x_test, y_test) = mnist.load_data()
+#Implement a Transformer block as a layer
+class TransformerBlock(layers.Layer):
+    def __init__(self, embed_dim, num_heads, ff_dim, rate=0.1):
+        super().__init__()
+        self.att = layers.MultiHeadAttention(num_heads=num_heads, key_dim=embed_dim)
+        self.ffn = keras.Sequential(
+            [layers.Dense(ff_dim, activation="relu"), layers.Dense(embed_dim),]
+        )
+        self.layernorm1 = layers.LayerNormalization(epsilon=1e-6)
+        self.layernorm2 = layers.LayerNormalization(epsilon=1e-6)
+        self.dropout1 = layers.Dropout(rate)
+        self.dropout2 = layers.Dropout(rate)
 
-#Noramalize the pixel values by deviding each pixel by 255
-x_train, x_test = x_train / 255.0, x_test / 255.0
+    def call(self, inputs, training):
+        attn_output = self.att(inputs, inputs)
+        attn_output = self.dropout1(attn_output, training=training)
+        out1 = self.layernorm1(inputs + attn_output)
+        ffn_output = self.ffn(out1)
+        ffn_output = self.dropout2(ffn_output, training=training)
+        return self.layernorm2(out1 + ffn_output)
 
-#SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
+#Implement embedding layer
+class TokenAndPositionEmbedding(layers.Layer):
+    def __init__(self, maxlen, vocab_size, embed_dim):
+        super().__init__()
+        self.token_emb = layers.Embedding(input_dim=vocab_size, output_dim=embed_dim)
+        self.pos_emb = layers.Embedding(input_dim=maxlen, output_dim=embed_dim)
+
+    def call(self, x):
+        maxlen = tf.shape(x)[-1]
+        positions = tf.range(start=0, limit=maxlen, delta=1)
+        positions = self.pos_emb(positions)
+        x = self.token_emb(x)
+        return x + positions
+
+# Download and prepare dataset
+vocab_size = 20000  # Only consider the top 20k words
+maxlen = 200  # Only consider the first 200 words of each movie review
+(x_train, y_train), (x_val, y_val) = keras.datasets.imdb.load_data(num_words=vocab_size)
+print(len(x_train), "Training sequences")
+print(len(x_val), "Validation sequences")
+x_train = keras.preprocessing.sequence.pad_sequences(x_train, maxlen=maxlen)
+x_val = keras.preprocessing.sequence.pad_sequences(x_val, maxlen=maxlen)
+
+#barajamos datos por si vienen ordenados
+idx = np.random.permutation(len(x_train))
+x_train = x_train[idx]
+y_train = y_train[idx]
+
+#SKYNNET:BEGIN_BINARYCLASS_ACC_LOSS
 
 #__CLOUDBOOK:LOCAL__
 def get_combinacion(a, n):
@@ -117,61 +163,64 @@ def skynnet_block_0(i):
     model.append(None)
     _DATA_TRAIN_X = x_train
     _DATA_TRAIN_Y = y_train
-    _DATA_TEST_X = x_test
-    _DATA_TEST_Y = y_test
-    _NEURON_1 = 64
-    _NEURON_2 = 30
-    _NEURON_3 = 5
+    _DATA_VAL_X = x_val
+    _DATA_VAL_Y = y_val
+    _DATA_TEST_X = x_train
+    _DATA_TEST_Y = y_train
+    _EMBEDDING_ = 16
+    _NEURON_1 = 10
+    _NEURON_2 = 1
     _EPOCHS = 1
-    grupos_de_categorias = dividir_array_categorias(_DATA_TRAIN_Y, 10, 4)
-    _DATA_TRAIN_X = _DATA_TRAIN_X[np.isin(_DATA_TRAIN_Y, combinar_arrays(grupos_de_categorias)[i])]
-    _DATA_TRAIN_Y = _DATA_TRAIN_Y[np.isin(_DATA_TRAIN_Y, combinar_arrays(grupos_de_categorias)[i])]
-    print(len(_DATA_TRAIN_X), len(_DATA_TRAIN_Y))
-    print(np.unique(_DATA_TRAIN_Y))
-    categorias_incluir = np.unique(_DATA_TRAIN_Y)
-    etiquetas_consecutivas = np.arange(len(categorias_incluir))
-    _DATA_TRAIN_Y = np.searchsorted(categorias_incluir, _DATA_TRAIN_Y)
-    _NEURON_3 = len(np.unique(_DATA_TRAIN_Y))
-    model[i] = tf.keras.models.Sequential([tf.keras.layers.Flatten(input_shape=(28, 28)), tf.keras.layers.Dense(_NEURON_1, activation='relu'), tf.keras.layers.Dense(_NEURON_2, activation='relu'), tf.keras.layers.Dense(_NEURON_3, activation='softmax')])
+    _BATCH = 32
+    embed_dim = 32
+    num_heads = 2
+    ff_dim = 32
+    inputs = layers.Input(shape=(maxlen,))
+    embedding_layer = TokenAndPositionEmbedding(maxlen, vocab_size, _EMBEDDING_)
+    x = embedding_layer(inputs)
+    transformer_block = TransformerBlock(_EMBEDDING_, 2, 32)
+    x = transformer_block(x)
+    x = layers.GlobalAveragePooling1D()(x)
+    x = layers.Dropout(0.1)(x)
+    x = layers.Dense(_NEURON_1, activation='relu')(x)
+    x = layers.Dropout(0.1)(x)
+    outputs = layers.Dense(_NEURON_2, activation='softmax')(x)
+    model[i] = keras.Model(inputs=inputs, outputs=outputs)
+    print('-----ESTRUCTURA RED ORIGINAL------')
     print(model[i].summary())
+    print('----------------------------------')
+    print('Entrenamos sin someter a validacion pues eso lo haremos despues')
     model[i].compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-    model[i].fit(_DATA_TRAIN_X, _DATA_TRAIN_Y, validation_split=0.3, epochs=_EPOCHS)
+    start = time.time()
+    print('training orig model...')
+    model[i].fit(_DATA_TRAIN_X, _DATA_TRAIN_Y, batch_size=_BATCH, epochs=_EPOCHS, validation_data=(_DATA_VAL_X, _DATA_VAL_Y))
+    end = time.time()
+    print(' original: tiempo transcurrido (segundos) =', end - start)
 #__CLOUDBOOK:PARALLEL__
 def skynnet_prediction_block_0(i):
     global predictions_0_0
     global model
     #__CLOUDBOOK:BEGINREMOVE__
-    _DATA_TEST_X = x_test
-    _DATA_TEST_Y = y_test
+    _DATA_TEST_X = x_train
+    _DATA_TEST_Y = y_train
     __CLOUDBOOK__ = {}
     __CLOUDBOOK__['agent'] = {}
     __CLOUDBOOK__['agent']['id'] = 'agente_skynnet'
     #__CLOUDBOOK:ENDREMOVE__
     label = __CLOUDBOOK__['agent']['id'] + str(i)
-    grupos_de_categorias = dividir_array_categorias(_DATA_TEST_Y, 10, 4)
-    _DATA_TEST_X = _DATA_TEST_X[np.isin(_DATA_TEST_Y, combinar_arrays(grupos_de_categorias)[i])]
-    _DATA_TEST_Y = _DATA_TEST_Y[np.isin(_DATA_TEST_Y, combinar_arrays(grupos_de_categorias)[i])]
-    print(len(_DATA_TEST_X), len(_DATA_TEST_Y))
-    print(np.unique(_DATA_TEST_Y))
-    categorias_incluir = np.unique(_DATA_TEST_Y)
-    etiquetas_consecutivas = np.arange(len(categorias_incluir))
-    _DATA_TEST_Y = np.searchsorted(categorias_incluir, _DATA_TEST_Y)
-    _NEURON_3 = len(np.unique(_DATA_TEST_Y))
     predictions_0_0[label] = model[i].predict(_DATA_TEST_X)
 
 
 #SKYNNET:END
 
-print("End of program")
-
 #__CLOUDBOOK:DU0__
 def skynnet_global_0():
-    for i in range(6):
+    for i in range(2):
         skynnet_block_0(i)
     #__CLOUDBOOK:SYNC__
 #__CLOUDBOOK:DU0__
 def skynnet_prediction_global_0():
-    for i in range(6):
+    for i in range(2):
         skynnet_prediction_block_0(i)
     #__CLOUDBOOK:SYNC__
 

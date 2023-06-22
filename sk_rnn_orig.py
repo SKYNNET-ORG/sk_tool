@@ -1,11 +1,21 @@
-import tensorflow as tf, numpy as np
+import tensorflow as tf
+#from tensorflow import keras
+import numpy as np
 import matplotlib.pyplot as plt
+import time
 
-mnist = tf.keras.datasets.mnist
-(x_train, y_train), (x_test, y_test) = mnist.load_data()
+# cargamos los datos de entrenamiento
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+#normalizamos a 0..1
+x_train = x_train.astype('float32') / 255
+x_test = x_test.astype('float32') / 255
 
-#Noramalize the pixel values by deviding each pixel by 255
-x_train, x_test = x_train / 255.0, x_test / 255.0
+# We will make a test set of 10 samples and use the other 9990 as validation data.
+# esto quita los ultimos 10 elementos (se queda con 0..9990)
+x_validate, y_validate = x_test[:-10], y_test[:-10]
+# esto coge los 10 ultimos (se queda con 9990..9999)
+x_test, y_test = x_test[-10:], y_test[-10:]
+
 
 #SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
 
@@ -117,13 +127,14 @@ def skynnet_block_0(i):
     model.append(None)
     _DATA_TRAIN_X = x_train
     _DATA_TRAIN_Y = y_train
+    _DATA_VAL_X = x_validate
+    _DATA_VAL_Y = y_validate
     _DATA_TEST_X = x_test
     _DATA_TEST_Y = y_test
-    _NEURON_1 = 64
-    _NEURON_2 = 30
-    _NEURON_3 = 5
-    _EPOCHS = 1
-    grupos_de_categorias = dividir_array_categorias(_DATA_TRAIN_Y, 10, 4)
+    _NEURON_1 = 43
+    _NEURON_2 = 7
+    _EPOCHS = 7
+    grupos_de_categorias = dividir_array_categorias(_DATA_TRAIN_Y, 10, 3)
     _DATA_TRAIN_X = _DATA_TRAIN_X[np.isin(_DATA_TRAIN_Y, combinar_arrays(grupos_de_categorias)[i])]
     _DATA_TRAIN_Y = _DATA_TRAIN_Y[np.isin(_DATA_TRAIN_Y, combinar_arrays(grupos_de_categorias)[i])]
     print(len(_DATA_TRAIN_X), len(_DATA_TRAIN_Y))
@@ -131,11 +142,27 @@ def skynnet_block_0(i):
     categorias_incluir = np.unique(_DATA_TRAIN_Y)
     etiquetas_consecutivas = np.arange(len(categorias_incluir))
     _DATA_TRAIN_Y = np.searchsorted(categorias_incluir, _DATA_TRAIN_Y)
-    _NEURON_3 = len(np.unique(_DATA_TRAIN_Y))
-    model[i] = tf.keras.models.Sequential([tf.keras.layers.Flatten(input_shape=(28, 28)), tf.keras.layers.Dense(_NEURON_1, activation='relu'), tf.keras.layers.Dense(_NEURON_2, activation='relu'), tf.keras.layers.Dense(_NEURON_3, activation='softmax')])
+    _NEURON_2 = len(np.unique(_DATA_TRAIN_Y))
+    grupos_de_categorias = dividir_array_categorias(_DATA_VAL_Y, 10, 3)
+    _DATA_VAL_X = _DATA_VAL_X[np.isin(_DATA_VAL_Y, combinar_arrays(grupos_de_categorias)[i])]
+    _DATA_VAL_Y = _DATA_VAL_Y[np.isin(_DATA_VAL_Y, combinar_arrays(grupos_de_categorias)[i])]
+    print(len(_DATA_VAL_X), len(_DATA_VAL_Y))
+    print(np.unique(_DATA_VAL_Y))
+    categorias_incluir = np.unique(_DATA_VAL_Y)
+    etiquetas_consecutivas = np.arange(len(categorias_incluir))
+    _DATA_VAL_Y = np.searchsorted(categorias_incluir, _DATA_VAL_Y)
+    _NEURON_2 = len(np.unique(_DATA_VAL_Y))
+    model[i] = tf.keras.Sequential()
+    model[i].add(tf.keras.layers.Input(shape=(28, 28)))
+    model[i].add(tf.keras.layers.GRU(_NEURON_1))
+    model[i].add(tf.keras.layers.BatchNormalization())
+    model[i].add(tf.keras.layers.Dense(_NEURON_2, activation='softmax'))
     print(model[i].summary())
-    model[i].compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-    model[i].fit(_DATA_TRAIN_X, _DATA_TRAIN_Y, validation_split=0.3, epochs=_EPOCHS)
+    model[i].compile(loss='sparse_categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
+    start = time.time()
+    model[i].fit(_DATA_TRAIN_X, _DATA_TRAIN_Y, validation_data=(_DATA_VAL_X, _DATA_VAL_Y), batch_size=32, epochs=_EPOCHS)
+    end = time.time()
+    print(' tiempo de training transcurrido (segundos) =', end - start)
 #__CLOUDBOOK:PARALLEL__
 def skynnet_prediction_block_0(i):
     global predictions_0_0
@@ -148,7 +175,7 @@ def skynnet_prediction_block_0(i):
     __CLOUDBOOK__['agent']['id'] = 'agente_skynnet'
     #__CLOUDBOOK:ENDREMOVE__
     label = __CLOUDBOOK__['agent']['id'] + str(i)
-    grupos_de_categorias = dividir_array_categorias(_DATA_TEST_Y, 10, 4)
+    grupos_de_categorias = dividir_array_categorias(_DATA_TEST_Y, 10, 3)
     _DATA_TEST_X = _DATA_TEST_X[np.isin(_DATA_TEST_Y, combinar_arrays(grupos_de_categorias)[i])]
     _DATA_TEST_Y = _DATA_TEST_Y[np.isin(_DATA_TEST_Y, combinar_arrays(grupos_de_categorias)[i])]
     print(len(_DATA_TEST_X), len(_DATA_TEST_Y))
@@ -156,22 +183,20 @@ def skynnet_prediction_block_0(i):
     categorias_incluir = np.unique(_DATA_TEST_Y)
     etiquetas_consecutivas = np.arange(len(categorias_incluir))
     _DATA_TEST_Y = np.searchsorted(categorias_incluir, _DATA_TEST_Y)
-    _NEURON_3 = len(np.unique(_DATA_TEST_Y))
+    _NEURON_2 = len(np.unique(_DATA_TEST_Y))
     predictions_0_0[label] = model[i].predict(_DATA_TEST_X)
 
 
 #SKYNNET:END
 
-print("End of program")
-
 #__CLOUDBOOK:DU0__
 def skynnet_global_0():
-    for i in range(6):
+    for i in range(3):
         skynnet_block_0(i)
     #__CLOUDBOOK:SYNC__
 #__CLOUDBOOK:DU0__
 def skynnet_prediction_global_0():
-    for i in range(6):
+    for i in range(3):
         skynnet_prediction_block_0(i)
     #__CLOUDBOOK:SYNC__
 

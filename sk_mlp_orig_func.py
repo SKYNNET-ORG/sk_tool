@@ -50,10 +50,10 @@ def dividir_array_categorias(array, n, m):
     #print(f"Tenemos {categorias_unicas} categorias unicas")
     
     if n < m:
-        raise ValueError("El numero de categorias original (n) debe ser mayor o igual al numero de arrays de destino (m).")
+        raise ValueError(f"El numero de categorias original {n} debe ser mayor o igual al numero de arrays de destino {m}.")
     
     if m > len(categorias_unicas):
-        raise ValueError("El numero de categorias unicas no es suficiente para dividirlas en los m arrays deseados.")
+        raise ValueError(f"El numero de categorias unicas {len(categorias_unicas)} no es suficiente para dividirlas en los {m} arrays deseados.")
     
     # Mezclar las categorias unicas de forma aleatoria
     #np.random.shuffle(categorias_unicas)
@@ -116,17 +116,15 @@ model = []
 def skynnet_block_0(i):
     global model
     model.append(None)
-    _DATA_TRAIN = (x_train, y_train)
-    _DATA_TEST = (x_test, y_test)
-    _NEURON_1 = 86
-    _NEURON_2 = 40
-    _NEURON_3 = 7
-    inputs = tf.keras.Input(shape=(28, 28))
-    x = tf.keras.layers.Flatten()(inputs)
-    x = tf.keras.layers.Dense(_NEURON_1, activation='relu')(x)
-    x = tf.keras.layers.Dense(_NEURON_2, activation='relu')(x)
-    outputs = tf.keras.layers.Dense(_NEURON_3, activation='softmax')(x)
-    grupos_de_categorias = dividir_array_categorias(_DATA_TRAIN_Y, 10, 3)
+    _DATA_TRAIN_X = x_train
+    _DATA_TRAIN_Y = y_train
+    _DATA_TEST_X = x_test
+    _DATA_TEST_Y = y_test
+    _NEURON_1 = 64
+    _NEURON_2 = 30
+    _NEURON_3 = 5
+    _EPOCHS = 5
+    grupos_de_categorias = dividir_array_categorias(_DATA_TRAIN_Y, 10, 4)
     _DATA_TRAIN_X = _DATA_TRAIN_X[np.isin(_DATA_TRAIN_Y, combinar_arrays(grupos_de_categorias)[i])]
     _DATA_TRAIN_Y = _DATA_TRAIN_Y[np.isin(_DATA_TRAIN_Y, combinar_arrays(grupos_de_categorias)[i])]
     print(len(_DATA_TRAIN_X), len(_DATA_TRAIN_Y))
@@ -134,21 +132,38 @@ def skynnet_block_0(i):
     categorias_incluir = np.unique(_DATA_TRAIN_Y)
     etiquetas_consecutivas = np.arange(len(categorias_incluir))
     _DATA_TRAIN_Y = np.searchsorted(categorias_incluir, _DATA_TRAIN_Y)
+    _NEURON_3 = len(np.unique(_DATA_TRAIN_Y))
+    inputs = tf.keras.Input(shape=(28, 28))
+    x = tf.keras.layers.Flatten()(inputs)
+    x = tf.keras.layers.Dense(_NEURON_1, activation='relu')(x)
+    x = tf.keras.layers.Dense(_NEURON_2, activation='relu')(x)
+    outputs = tf.keras.layers.Dense(_NEURON_3, activation='softmax')(x)
     model[i] = tf.keras.Model(inputs=inputs, outputs=outputs)
     print(model[i].summary())
     model[i].compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-    model[i].fit(x_train, y_train, validation_split=0.3, epochs=2)
+    model[i].fit(_DATA_TRAIN_X, _DATA_TRAIN_Y, validation_split=0.3, epochs=_EPOCHS)
 #__CLOUDBOOK:PARALLEL__
 def skynnet_prediction_block_0(i):
     global predictions_0_0
     global model
     #__CLOUDBOOK:BEGINREMOVE__
+    _DATA_TEST_X = x_test
+    _DATA_TEST_Y = y_test
     __CLOUDBOOK__ = {}
     __CLOUDBOOK__['agent'] = {}
     __CLOUDBOOK__['agent']['id'] = 'agente_skynnet'
     #__CLOUDBOOK:ENDREMOVE__
     label = __CLOUDBOOK__['agent']['id'] + str(i)
-    predictions_0_0[label] = model[i].predict(x_test)
+    grupos_de_categorias = dividir_array_categorias(_DATA_TEST_Y, 10, 4)
+    _DATA_TEST_X = _DATA_TEST_X[np.isin(_DATA_TEST_Y, combinar_arrays(grupos_de_categorias)[i])]
+    _DATA_TEST_Y = _DATA_TEST_Y[np.isin(_DATA_TEST_Y, combinar_arrays(grupos_de_categorias)[i])]
+    print(len(_DATA_TEST_X), len(_DATA_TEST_Y))
+    print(np.unique(_DATA_TEST_Y))
+    categorias_incluir = np.unique(_DATA_TEST_Y)
+    etiquetas_consecutivas = np.arange(len(categorias_incluir))
+    _DATA_TEST_Y = np.searchsorted(categorias_incluir, _DATA_TEST_Y)
+    _NEURON_3 = len(np.unique(_DATA_TEST_Y))
+    predictions_0_0[label] = model[i].predict(_DATA_TEST_X)
 
 
 #SKYNNET:END
@@ -157,12 +172,12 @@ print("End of program")
 
 #__CLOUDBOOK:DU0__
 def skynnet_global_0():
-    for i in range(3):
+    for i in range(6):
         skynnet_block_0(i)
     #__CLOUDBOOK:SYNC__
 #__CLOUDBOOK:DU0__
 def skynnet_prediction_global_0():
-    for i in range(3):
+    for i in range(6):
         skynnet_prediction_block_0(i)
     #__CLOUDBOOK:SYNC__
 

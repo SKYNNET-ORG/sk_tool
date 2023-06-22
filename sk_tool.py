@@ -6,7 +6,7 @@ from math import comb,ceil
 
 
 #Variables globales
-sk_vars_list = ["_EMBEDDING_","_NEURON_","_CELL_","_EPOCHS","_BATCH"]
+sk_vars_list = ["_EMBEDDING_","_NEURON_","_CELL_","_EPOCHS","_FILTERS_"]
 sk_functions_list = ['summary','compile','fit','predict']
 sk_creation_model_list = ['Sequential','Model']
 
@@ -53,10 +53,10 @@ def dividir_array_categorias(array, n, m):
     #print(f"Tenemos {categorias_unicas} categorias unicas")
     
     if n < m:
-        raise ValueError("El numero de categorias original (n) debe ser mayor o igual al numero de arrays de destino (m).")
+        raise ValueError(f"El numero de categorias original {n} debe ser mayor o igual al numero de arrays de destino {m}.")
     
     if m > len(categorias_unicas):
-        raise ValueError("El numero de categorias unicas no es suficiente para dividirlas en los m arrays deseados.")
+        raise ValueError(f"El numero de categorias unicas {len(categorias_unicas)} no es suficiente para dividirlas en los {m} arrays deseados.")
     
     # Mezclar las categorias unicas de forma aleatoria
     #np.random.shuffle(categorias_unicas)
@@ -178,6 +178,7 @@ class VisitModelFunctions(ast.NodeVisitor):
     '''Esta clase es la que permite obtener las asignaciones que se usan para crear modelos en skynnet,
     ya sea con el modelo normal o funcional. Ademas prepara el diccionario que tendra un resumen de los nodos
     para las funciones summary, creation, compile, fit, si añadimos alguna funcion nueva se añade al diccionario de forma automatica en otra clase'''
+
     def __init__(self):
         self.dict_modelos = {}
 
@@ -209,7 +210,26 @@ class VisitModelFunctions(ast.NodeVisitor):
         if isinstance(node.func, ast.Attribute) and node.func.attr in sk_functions_list:
             if isinstance(node.func.value, ast.Name) and node.func.value.id in self.dict_modelos.keys():
                 self.dict_modelos[node.func.value.id][node.func.attr] = node
+        
         self.generic_visit(node)
+
+class getInputModel(ast.NodeVisitor):
+    '''meto en el dict, el input del diccionario'''
+    def __init__(self,model_name,dict_modelos):
+        self.dict_modelos = dict_modelos
+        self.model_name = model_name
+        #self.dict_modelos[self.model_name] = {}
+    
+    def visit_Assign(self, node):
+        if len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+            if isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Attribute) and node.value.func.attr == "Input":
+                self.dict_modelos[self.model_name]["input"] = node
+        
+        self.generic_visit(node)
+
+    '''def visit_Call(self,node):
+        if isinstance(node.func, ast.Attribute) and node.func.attr =="Input":
+            self.dict_modelos[self.model_name]["input"] = node'''
 
 class RemovePredictionNode(ast.NodeTransformer):
     '''Elimino la asignacion predicted = model.predict(x), solo las que tengan esa
@@ -253,6 +273,7 @@ class VisitLastNeuron(ast.NodeVisitor):
     TODO: Mezclar esta clase con la que reduce los datos'''
     max_valor = 0
     n_categorias = 0
+    last_neuron = ()
 
     def visit_Assign(self, node):
         '''Esta funcion es la que divide por un numero entero las variables de skynnet
@@ -263,8 +284,10 @@ class VisitLastNeuron(ast.NodeVisitor):
             if existe_sk_var == True and variable_skynnet == '_NEURON_':
                 #print(f"node.value es {node.value.value}")
                 if valor>self.max_valor:
+                    self.last_neuron = ()
                     self.max_valor = valor
                     self.n_categorias = node.value.value
+                    self.last_neuron = (node.targets[0].id,self.n_categorias)
 
 class GetModelDataVars(ast.NodeVisitor):
     '''Uso esta clase para guardar en el diccionario las variables de datos del modelo'''
@@ -288,7 +311,7 @@ class GetModelDataVars(ast.NodeVisitor):
         if len(node.targets)==1 and node.targets[0].id in self.data_vars_test:
             self.dict_modelos[self.model_name]["data_test"].append(node)
 
-def division_datos_multiclass(tipo_datos,categorias,grupos):
+def division_datos_multiclass(tipo_datos,categorias,grupos,last_neuron):
     if tipo_datos == "train":
         datos_x = "_DATA_TRAIN_X"
         datos_y = "_DATA_TRAIN_Y"
@@ -309,51 +332,47 @@ print(np.unique({datos_y}))
 categorias_incluir = np.unique({datos_y})
 etiquetas_consecutivas = np.arange(len(categorias_incluir))
 {datos_y} = np.searchsorted(categorias_incluir, {datos_y})
+{last_neuron[0]} = len(np.unique({datos_y}))
 '''
     return parse(division_datos_multiclass)
 
-def es_iterable(obj):
-    try:
-        iter(obj)
-        return True
-    except TypeError:
-        return False
 
-def inserta_nodo(sk_dict,model_name,to_insert_node,node_destiny):
-    #print("Entro en inserta_nodo")
+def inserta_nodo(sk_dict,model_name,to_insert_node,node_destiny,last_neuron):
+    
     nodo_a_buscar = sk_dict[model_name]["creation"]
- 
+    nodo_a_buscar = sk_dict[model_name]["input"]
     if isinstance(node_destiny, ast.AST):
         for child in ast.iter_child_nodes(node_destiny):
             #print("child node es", child)
             if child == nodo_a_buscar:
+                print(f"ENCONTRADO en {unparse(child)}")
                 index = node_destiny.body.index(child)
                 node_destiny.body.insert(index, to_insert_node)
                 #print("Nodo insertado")
                 break
             else:
-                inserta_nodo(sk_dict, model_name, to_insert_node, child)
+                inserta_nodo(sk_dict, model_name, to_insert_node, child,last_neuron)
     elif isinstance(node_destiny, list):
         for child in node_destiny:
-            inserta_nodo(sk_dict, model_name, to_insert_node, child)
+            inserta_nodo(sk_dict, model_name, to_insert_node, child,last_neuron)
 
 
 
-def inserta_filtro_datos(nodo_destino,tipo_funcion,sk_dict,categorias,grupos):
+def inserta_filtro_datos(nodo_destino,tipo_funcion,sk_dict,categorias,grupos,last_neuron):
     '''tipo funcion: general(train y val) predict(test)
     nodo_destino: nodo tipo funcion en el que hay que insertar'''
     if tipo_funcion=="general":
         for model_name in sk_dict.keys():
             if sk_dict[model_name]["data_train"] != []:
-                to_insert_node = division_datos_multiclass("train",categorias,grupos)
-                inserta_nodo(sk_dict,model_name,to_insert_node,nodo_destino)
+                to_insert_node = division_datos_multiclass("train",categorias,grupos,last_neuron)
+                inserta_nodo(sk_dict,model_name,to_insert_node,nodo_destino,last_neuron)
             if sk_dict[model_name]["data_val"] != []:
-                to_insert_node = division_datos_multiclass("validate",categorias,grupos)
-                inserta_nodo(sk_dict,model_name,to_insert_node,nodo_destino)
+                to_insert_node = division_datos_multiclass("validate",categorias,grupos,last_neuron)
+                inserta_nodo(sk_dict,model_name,to_insert_node,nodo_destino,last_neuron)
     elif tipo_funcion == "predict":
         for model_name in sk_dict.keys():
             if sk_dict[model_name]["data_test"] != []:
-                to_insert_node = division_datos_multiclass("test",categorias,grupos)
+                to_insert_node = division_datos_multiclass("test",categorias,grupos,last_neuron)
                 nodo_destino.body.insert(8,to_insert_node) #En el predict es distinto, se exactamente donde insertar
     else:
         print(f"Error: el tipo de funcion no es valido ({tipo_funcion})")
@@ -482,14 +501,18 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
     ast_code = ast.parse(code)
     #Lo primerisimo es saber las categorias 
     reduccion = num_subredes
+    visit_categorias = VisitLastNeuron()
+    visit_categorias.visit(ast_code)
+    last_neuron = visit_categorias.last_neuron
+    print(last_neuron)
     if skynnet_config['Type'] == 'MULTICLASS':
         #categorias: las categorias totales, las de la ultima capa _NEURON
         #estas categorias se distribuyen en las subredes dividiendose en grupos tomados de dos en dos
         #grupos: grupos en los que divido las categorias
         #tomados: 2, porque por defecto se toman de 2 en 2
         #categorias_subred: la media de categorias que le tocan a una subred (las categorias se meten en grupos, y a cada subred le tocan dos grupos)
-        visit_categorias = VisitLastNeuron()
-        visit_categorias.visit(ast_code)
+        #visit_categorias = VisitLastNeuron()
+        #visit_categorias.visit(ast_code)
         categorias = visit_categorias.n_categorias
         print(f"Son {categorias} categorias originales")
         #Se calcula cuantas subredes quedaran
@@ -503,6 +526,12 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         print(f"Categorias por subred: {categorias_subred}")
         reduccion = (categorias/categorias_subred)
         print(f"la reduccion sera por {reduccion} esto es por defecto TODO: Ajustar de forma mas fina por cada subred")
+    elif skynnet_config['Type'] == 'BINARYCLASS':
+        reduccion = 2
+        last_neuron = (last_neuron[0],2)
+        num_subredes = 2
+        grupos = 2
+        categorias = 2
     #Se reducen los datos
     node_data_vars_reduced = TransformAssignSkVars(reduccion).visit(ast_code)
     #==========================================
@@ -511,12 +540,19 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
     model_functions = VisitModelFunctions()
     model_functions.visit(node_data_vars_reduced)
     sk_dict = model_functions.dict_modelos
+
     #print(sk_dict)
     #sk_dict contiene todos los nodos de las funciones que busco
     #============================================
     #Una vez tengo el skdict, puedo guardar los datos de entrenamiento, test y validacion
+    hay_prediccion = False #Variable para hacer la funcion predict o no, si no la hay poner un pass en la funcion
     for model_name in sk_dict.keys():
+        hay_prediccion = 'predict' in sk_dict[model_name]
         GetModelDataVars(model_name,sk_dict).visit(node_data_vars_reduced)
+        getInputModel(model_name,sk_dict).visit(node_data_vars_reduced) #aqui cojo el nodo antes de crear la red, para meter la division de datos y la ultima neurona antes
+        #if not(sk_dict[model_name]["input"]):
+        if "input" not in sk_dict[model_name]:
+            sk_dict[model_name]["input"] = sk_dict[model_name]["creation"] #Si no usas el modelo funcional TODO: Eliminar en el futuro
     print(sk_dict)
     #=========================================
     #Quito la prediccion y la guardo para meterla en una funcion nueva
@@ -576,80 +612,81 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         ModelArrayTransform(model_name).visit(func_node)'''
     #Meto antes del nodo de creacion del modelo, el codigo para calcular la division de los datos
     if skynnet_config['Type'] == 'MULTICLASS':
-        inserta_filtro_datos(func_node,"general",sk_dict,categorias,grupos)
+        inserta_filtro_datos(func_node,"general",sk_dict,categorias,grupos,last_neuron)
     fout.write(unparse(fix_missing_locations(func_node)))
     #=========================================
-    #Ahora hay que escribir la funcion de la prediccion, parallel y todo eso
-    fout.write(unparse(fix_missing_locations(parallel_cloudbook_label)))
-    #cuerpo de la funcion: global predictions
-    prediction_vars = []
-    for model_number in range(number_of_models):
-        prediction_vars.append(f"predictions_{block_number}_{model_number}")
-    global_predictions_vars = []
-    for prediction in prediction_vars:
-        global_predictions_vars.append(Global(names=[prediction]))
-    model_vars = []
-    for model_name in sk_dict.keys():
-        model_vars.append(Global(names=[model_name]))
-    #fix_missing_locations(global_prediction_vars)
-    #beginremove endremove
-    #beginremove_cloudbook_label=Expr(value=Comment(value='#__CLOUDBOOK:BEGINREMOVE__'))
-    beginremove_cloudbook_label=Comment(value='#__CLOUDBOOK:BEGINREMOVE__')
-    cloudbook_var_prepare = ast.parse("__CLOUDBOOK__ = {}\n__CLOUDBOOK__['agent'] = {}")
-    cloudbook_var = Subscript(
-        value=Subscript(
-            value=Name(id="__CLOUDBOOK__", ctx=Load()),
-            slice=Index(value=Str(s="agent")),
-            ctx=Load()
-        ),
-        slice=Index(value=Str(s="id")),
-        ctx=Store()
-    )
-    value = Str(s="agente_skynnet")
-    cloudbook_var_assig = Assign(targets=[cloudbook_var], value=value)
-    #endremove_cloudbook_label=Expr(value=Comment(value='#__CLOUDBOOK:ENDREMOVE__'))
-    endremove_cloudbook_label=Comment(value='#__CLOUDBOOK:ENDREMOVE__')
-    label_var = Name(id="label",ctx=Load())
-    #Para permitir varios modelos por agente tengo que añadir str(i) al label
-    #assignation_cb_dict = Assign(targets=[label_var], value=cloudbook_var)
-    value=ast.BinOp(
-        left=cloudbook_var,     # Variable adios
-        op=ast.Add(),                                  # Operador de suma
-        right=ast.Call(
-            func=ast.Name(id='str', ctx=ast.Load()),    # Función str
-            args=[ast.Name(id='i', ctx=ast.Load())],    # Argumento i
-            keywords=[]
+    if hay_prediccion: #si no la hay escribo la funcion con un pass
+        #Ahora hay que escribir la funcion de la prediccion, parallel y todo eso
+        fout.write(unparse(fix_missing_locations(parallel_cloudbook_label)))
+        #cuerpo de la funcion: global predictions
+        prediction_vars = []
+        for model_number in range(number_of_models):
+            prediction_vars.append(f"predictions_{block_number}_{model_number}")
+        global_predictions_vars = []
+        for prediction in prediction_vars:
+            global_predictions_vars.append(Global(names=[prediction]))
+        model_vars = []
+        for model_name in sk_dict.keys():
+            model_vars.append(Global(names=[model_name]))
+        #fix_missing_locations(global_prediction_vars)
+        #beginremove endremove
+        #beginremove_cloudbook_label=Expr(value=Comment(value='#__CLOUDBOOK:BEGINREMOVE__'))
+        beginremove_cloudbook_label=Comment(value='#__CLOUDBOOK:BEGINREMOVE__')
+        cloudbook_var_prepare = ast.parse("__CLOUDBOOK__ = {}\n__CLOUDBOOK__['agent'] = {}")
+        cloudbook_var = Subscript(
+            value=Subscript(
+                value=Name(id="__CLOUDBOOK__", ctx=Load()),
+                slice=Index(value=Str(s="agent")),
+                ctx=Load()
+            ),
+            slice=Index(value=Str(s="id")),
+            ctx=Store()
         )
-    )
-    assignation_cb_dict = Assign(targets=[label_var], value=value)
-    predictions_assignements = []
-    for i,model_name in enumerate(sk_dict.keys()):
-        nombre = prediction_vars[i]
-        #valor = sk_dict[model_name]['predict']
-        valor = ModelArrayTransform(model_name).visit(sk_dict[model_name]['predict']) #Ahora cambia por array de modelos
-        prediction_var_target = Subscript(
-            value=Name(id=nombre,ctx=Load()),
-            slice=Index(value=label_var)
+        value = Str(s="agente_skynnet")
+        cloudbook_var_assig = Assign(targets=[cloudbook_var], value=value)
+        #endremove_cloudbook_label=Expr(value=Comment(value='#__CLOUDBOOK:ENDREMOVE__'))
+        endremove_cloudbook_label=Comment(value='#__CLOUDBOOK:ENDREMOVE__')
+        label_var = Name(id="label",ctx=Load())
+        #Para permitir varios modelos por agente tengo que añadir str(i) al label
+        #assignation_cb_dict = Assign(targets=[label_var], value=cloudbook_var)
+        value=ast.BinOp(
+            left=cloudbook_var,     # Variable adios
+            op=ast.Add(),                                  # Operador de suma
+            right=ast.Call(
+                func=ast.Name(id='str', ctx=ast.Load()),    # Función str
+                args=[ast.Name(id='i', ctx=ast.Load())],    # Argumento i
+                keywords=[]
             )
-        prediction_assignment = Assign(targets=[prediction_var_target], value=valor)
-        fix_missing_locations(prediction_assignment)
-        #print(unparse(prediction_assignment))
-        predictions_assignements.append(prediction_assignment)
-    #crear la funcion y meterle lo anterior en el body
-    pred_func_node = FunctionDef(
-        name="skynnet_prediction_block_" + str(block_number),
-        args=arguments(args=[ast.arg(arg='i', annotation=None)], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
-        body=[global_predictions_vars,model_vars,beginremove_cloudbook_label,cloudbook_var_prepare,cloudbook_var_assig, endremove_cloudbook_label,assignation_cb_dict, predictions_assignements],
-        decorator_list=[]
-    )
-    fout.write("\n")
-    #insertar el data_test
-    for model_name in sk_dict.keys():
-        to_insert_nodes = sk_dict[model_name]['data_test']
-        pred_func_node.body.insert(3,to_insert_nodes)
-    if skynnet_config['Type'] == 'MULTICLASS':
-        inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos)
-    fout.write(unparse(fix_missing_locations(pred_func_node)))
+        )
+        assignation_cb_dict = Assign(targets=[label_var], value=value)
+        predictions_assignements = []
+        for i,model_name in enumerate(sk_dict.keys()):
+            nombre = prediction_vars[i]
+            #valor = sk_dict[model_name]['predict']
+            valor = ModelArrayTransform(model_name).visit(sk_dict[model_name]['predict']) #Ahora cambia por array de modelos
+            prediction_var_target = Subscript(
+                value=Name(id=nombre,ctx=Load()),
+                slice=Index(value=label_var)
+                )
+            prediction_assignment = Assign(targets=[prediction_var_target], value=valor)
+            fix_missing_locations(prediction_assignment)
+            #print(unparse(prediction_assignment))
+            predictions_assignements.append(prediction_assignment)
+        #crear la funcion y meterle lo anterior en el body
+        pred_func_node = FunctionDef(
+            name="skynnet_prediction_block_" + str(block_number),
+            args=arguments(args=[ast.arg(arg='i', annotation=None)], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
+            body=[global_predictions_vars,model_vars,beginremove_cloudbook_label,cloudbook_var_prepare,cloudbook_var_assig, endremove_cloudbook_label,assignation_cb_dict, predictions_assignements],
+            decorator_list=[]
+        )
+        fout.write("\n")
+        #insertar el data_test
+        for model_name in sk_dict.keys():
+            to_insert_nodes = sk_dict[model_name]['data_test']
+            pred_func_node.body.insert(3,to_insert_nodes)
+        if skynnet_config['Type'] == 'MULTICLASS':
+            inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos,last_neuron)
+        fout.write(unparse(fix_missing_locations(pred_func_node)))
 
 
     fout.write('\n\n')

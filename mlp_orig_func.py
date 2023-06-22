@@ -7,15 +7,16 @@ mnist = tf.keras.datasets.mnist
 #Noramalize the pixel values by deviding each pixel by 255
 x_train, x_test = x_train / 255.0, x_test / 255.0
 
-
 #SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
 
-_DATA_TRAIN =(x_train,y_train)
-#_DATA_VAL=(x_val,y_val) En este caso, se usa un validation split
-_DATA_TEST=(x_test,y_test)
+_DATA_TRAIN_X = x_train
+_DATA_TRAIN_Y = y_train
+_DATA_TEST_X = x_test
+_DATA_TEST_Y = y_test
 _NEURON_1 = 128
 _NEURON_2 = 60
 _NEURON_3 = 10
+_EPOCHS = 10
 
 
 #Modelo funcional
@@ -33,10 +34,10 @@ model.compile(optimizer='adam',
               metrics=['accuracy'])
 
 
-model.fit(x_train, y_train, validation_split=0.3, epochs=2)
+model.fit(_DATA_TRAIN_X, _DATA_TRAIN_Y, validation_split=0.3, epochs=_EPOCHS)
 
 
-predicted = model.predict(x_test)
+predicted = model.predict(_DATA_TEST_X)
 
 
 #SKYNNET:END
