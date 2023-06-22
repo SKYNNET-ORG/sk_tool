@@ -175,6 +175,28 @@ def skynnet_block_0(i):
     embed_dim = 32
     num_heads = 2
     ff_dim = 32
+    datos_train_x_1 = _DATA_TRAIN_X[:len(_DATA_TRAIN_X) // 2]
+    datos_train_x_2 = _DATA_TRAIN_X[len(_DATA_TRAIN_X) // 2:]
+    datos_train_y_1 = _DATA_TRAIN_Y[:len(_DATA_TRAIN_Y) // 2]
+    datos_train_y_2 = _DATA_TRAIN_Y[len(_DATA_TRAIN_Y) // 2:]
+    if i == 1:
+        _DATA_TRAIN_X = datos_train_x_1
+        _DATA_TRAIN_Y = datos_train_y_1
+    else:
+        _DATA_TRAIN_X = datos_train_x_2
+        _DATA_TRAIN_Y = datos_train_y_2
+    _NEURON_2 = 2
+    datos_validate_x_1 = _DATA_VAL_X[:len(_DATA_VAL_X) // 2]
+    datos_validate_x_2 = _DATA_VAL_X[len(_DATA_VAL_X) // 2:]
+    datos_validate_y_1 = _DATA_VAL_Y[:len(_DATA_VAL_Y) // 2]
+    datos_validate_y_2 = _DATA_VAL_Y[len(_DATA_VAL_Y) // 2:]
+    if i == 1:
+        _DATA_VAL_X = datos_validate_x_1
+        _DATA_VAL_Y = datos_validate_y_1
+    else:
+        _DATA_VAL_X = datos_validate_x_2
+        _DATA_VAL_Y = datos_validate_y_2
+    _NEURON_2 = 2
     inputs = layers.Input(shape=(maxlen,))
     embedding_layer = TokenAndPositionEmbedding(maxlen, vocab_size, _EMBEDDING_)
     x = embedding_layer(inputs)
@@ -208,6 +230,17 @@ def skynnet_prediction_block_0(i):
     __CLOUDBOOK__['agent']['id'] = 'agente_skynnet'
     #__CLOUDBOOK:ENDREMOVE__
     label = __CLOUDBOOK__['agent']['id'] + str(i)
+    datos_test_x_1 = _DATA_TEST_X[:len(_DATA_TEST_X) // 2]
+    datos_test_x_2 = _DATA_TEST_X[len(_DATA_TEST_X) // 2:]
+    datos_test_y_1 = _DATA_TEST_Y[:len(_DATA_TEST_Y) // 2]
+    datos_test_y_2 = _DATA_TEST_Y[len(_DATA_TEST_Y) // 2:]
+    if i == 1:
+        _DATA_TEST_X = datos_test_x_1
+        _DATA_TEST_Y = datos_test_y_1
+    else:
+        _DATA_TEST_X = datos_test_x_2
+        _DATA_TEST_Y = datos_test_y_2
+    _NEURON_2 = 2
     predictions_0_0[label] = model[i].predict(_DATA_TEST_X)
 
 

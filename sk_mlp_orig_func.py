@@ -7,7 +7,6 @@ mnist = tf.keras.datasets.mnist
 #Noramalize the pixel values by deviding each pixel by 255
 x_train, x_test = x_train / 255.0, x_test / 255.0
 
-
 #SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
 
 #__CLOUDBOOK:LOCAL__
@@ -120,11 +119,11 @@ def skynnet_block_0(i):
     _DATA_TRAIN_Y = y_train
     _DATA_TEST_X = x_test
     _DATA_TEST_Y = y_test
-    _NEURON_1 = 64
-    _NEURON_2 = 30
-    _NEURON_3 = 5
-    _EPOCHS = 5
-    grupos_de_categorias = dividir_array_categorias(_DATA_TRAIN_Y, 10, 4)
+    _NEURON_1 = 26
+    _NEURON_2 = 12
+    _NEURON_3 = 2
+    _EPOCHS = 2
+    grupos_de_categorias = dividir_array_categorias(_DATA_TRAIN_Y, 10, 10)
     _DATA_TRAIN_X = _DATA_TRAIN_X[np.isin(_DATA_TRAIN_Y, combinar_arrays(grupos_de_categorias)[i])]
     _DATA_TRAIN_Y = _DATA_TRAIN_Y[np.isin(_DATA_TRAIN_Y, combinar_arrays(grupos_de_categorias)[i])]
     print(len(_DATA_TRAIN_X), len(_DATA_TRAIN_Y))
@@ -154,7 +153,7 @@ def skynnet_prediction_block_0(i):
     __CLOUDBOOK__['agent']['id'] = 'agente_skynnet'
     #__CLOUDBOOK:ENDREMOVE__
     label = __CLOUDBOOK__['agent']['id'] + str(i)
-    grupos_de_categorias = dividir_array_categorias(_DATA_TEST_Y, 10, 4)
+    grupos_de_categorias = dividir_array_categorias(_DATA_TEST_Y, 10, 10)
     _DATA_TEST_X = _DATA_TEST_X[np.isin(_DATA_TEST_Y, combinar_arrays(grupos_de_categorias)[i])]
     _DATA_TEST_Y = _DATA_TEST_Y[np.isin(_DATA_TEST_Y, combinar_arrays(grupos_de_categorias)[i])]
     print(len(_DATA_TEST_X), len(_DATA_TEST_Y))
@@ -172,12 +171,12 @@ print("End of program")
 
 #__CLOUDBOOK:DU0__
 def skynnet_global_0():
-    for i in range(6):
+    for i in range(45):
         skynnet_block_0(i)
     #__CLOUDBOOK:SYNC__
 #__CLOUDBOOK:DU0__
 def skynnet_prediction_global_0():
-    for i in range(6):
+    for i in range(45):
         skynnet_prediction_block_0(i)
     #__CLOUDBOOK:SYNC__
 

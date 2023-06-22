@@ -311,7 +311,7 @@ class GetModelDataVars(ast.NodeVisitor):
         if len(node.targets)==1 and node.targets[0].id in self.data_vars_test:
             self.dict_modelos[self.model_name]["data_test"].append(node)
 
-def division_datos_multiclass(tipo_datos,categorias,grupos,last_neuron):
+def division_datos_multiclass(tipo_datos,categorias,grupos,last_neuron,tipo_red):
     if tipo_datos == "train":
         datos_x = "_DATA_TRAIN_X"
         datos_y = "_DATA_TRAIN_Y"
@@ -324,7 +324,8 @@ def division_datos_multiclass(tipo_datos,categorias,grupos,last_neuron):
     else:
         print("Warning unknown data type")
         return None
-    division_datos_multiclass = f'''grupos_de_categorias = dividir_array_categorias({datos_y},{categorias},{grupos})
+    if tipo_red == 'MULTICLASS':
+        division_datos = f'''grupos_de_categorias = dividir_array_categorias({datos_y},{categorias},{grupos})
 {datos_x} = {datos_x}[np.isin({datos_y},combinar_arrays(grupos_de_categorias)[i])]
 {datos_y} = {datos_y}[np.isin({datos_y},combinar_arrays(grupos_de_categorias)[i])]
 print(len({datos_x}),len({datos_y}))
@@ -334,7 +335,21 @@ etiquetas_consecutivas = np.arange(len(categorias_incluir))
 {datos_y} = np.searchsorted(categorias_incluir, {datos_y})
 {last_neuron[0]} = len(np.unique({datos_y}))
 '''
-    return parse(division_datos_multiclass)
+    elif tipo_red == 'BINARYCLASS':
+        division_datos = f'''
+datos_{tipo_datos}_x_1 = {datos_x}[:len({datos_x})//2]
+datos_{tipo_datos}_x_2 = {datos_x}[len({datos_x})//2:]
+datos_{tipo_datos}_y_1 = {datos_y}[:len({datos_y})//2]
+datos_{tipo_datos}_y_2 = {datos_y}[len({datos_y})//2:]
+if i == 1:
+    {datos_x} = datos_{tipo_datos}_x_1
+    {datos_y} = datos_{tipo_datos}_y_1
+else:
+    {datos_x} = datos_{tipo_datos}_x_2
+    {datos_y} = datos_{tipo_datos}_y_2
+{last_neuron[0]} = 2
+        '''
+    return fix_missing_locations(parse(division_datos))
 
 
 def inserta_nodo(sk_dict,model_name,to_insert_node,node_destiny,last_neuron):
@@ -345,7 +360,7 @@ def inserta_nodo(sk_dict,model_name,to_insert_node,node_destiny,last_neuron):
         for child in ast.iter_child_nodes(node_destiny):
             #print("child node es", child)
             if child == nodo_a_buscar:
-                print(f"ENCONTRADO en {unparse(child)}")
+                #print(f"ENCONTRADO en {unparse(child)}")
                 index = node_destiny.body.index(child)
                 node_destiny.body.insert(index, to_insert_node)
                 #print("Nodo insertado")
@@ -358,21 +373,21 @@ def inserta_nodo(sk_dict,model_name,to_insert_node,node_destiny,last_neuron):
 
 
 
-def inserta_filtro_datos(nodo_destino,tipo_funcion,sk_dict,categorias,grupos,last_neuron):
+def inserta_filtro_datos(nodo_destino,tipo_funcion,sk_dict,categorias,grupos,last_neuron,tipo_red):
     '''tipo funcion: general(train y val) predict(test)
     nodo_destino: nodo tipo funcion en el que hay que insertar'''
     if tipo_funcion=="general":
         for model_name in sk_dict.keys():
             if sk_dict[model_name]["data_train"] != []:
-                to_insert_node = division_datos_multiclass("train",categorias,grupos,last_neuron)
+                to_insert_node = division_datos_multiclass("train",categorias,grupos,last_neuron,tipo_red)
                 inserta_nodo(sk_dict,model_name,to_insert_node,nodo_destino,last_neuron)
             if sk_dict[model_name]["data_val"] != []:
-                to_insert_node = division_datos_multiclass("validate",categorias,grupos,last_neuron)
+                to_insert_node = division_datos_multiclass("validate",categorias,grupos,last_neuron,tipo_red)
                 inserta_nodo(sk_dict,model_name,to_insert_node,nodo_destino,last_neuron)
     elif tipo_funcion == "predict":
         for model_name in sk_dict.keys():
             if sk_dict[model_name]["data_test"] != []:
-                to_insert_node = division_datos_multiclass("test",categorias,grupos,last_neuron)
+                to_insert_node = division_datos_multiclass("test",categorias,grupos,last_neuron,tipo_red)
                 nodo_destino.body.insert(8,to_insert_node) #En el predict es distinto, se exactamente donde insertar
     else:
         print(f"Error: el tipo de funcion no es valido ({tipo_funcion})")
@@ -612,7 +627,9 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         ModelArrayTransform(model_name).visit(func_node)'''
     #Meto antes del nodo de creacion del modelo, el codigo para calcular la division de los datos
     if skynnet_config['Type'] == 'MULTICLASS':
-        inserta_filtro_datos(func_node,"general",sk_dict,categorias,grupos,last_neuron)
+        inserta_filtro_datos(func_node,"general",sk_dict,categorias,grupos,last_neuron,'MULTICLASS')
+    elif skynnet_config['Type'] == 'BINARYCLASS':
+        inserta_filtro_datos(func_node,"general",sk_dict,categorias,grupos,last_neuron,'BINARYCLASS')
     fout.write(unparse(fix_missing_locations(func_node)))
     #=========================================
     if hay_prediccion: #si no la hay escribo la funcion con un pass
@@ -685,7 +702,9 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
             to_insert_nodes = sk_dict[model_name]['data_test']
             pred_func_node.body.insert(3,to_insert_nodes)
         if skynnet_config['Type'] == 'MULTICLASS':
-            inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos,last_neuron)
+            inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos,last_neuron,'MULTICLASS')
+        elif skynnet_config['Type'] == 'BINARYCLASS':
+            inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos,last_neuron,'BINARYCLASS')
         fout.write(unparse(fix_missing_locations(pred_func_node)))
 
 
