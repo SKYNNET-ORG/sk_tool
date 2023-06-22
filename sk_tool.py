@@ -349,6 +349,8 @@ else:
     {datos_y} = datos_{tipo_datos}_y_2
 {last_neuron[0]} = 2
         '''
+    elif tipo_red == 'REGRESSION':
+        division_datos = f'''#TODO'''
     return fix_missing_locations(parse(division_datos))
 
 
@@ -397,9 +399,9 @@ def create_new_file(file):
     '''Esta funcion, crea el fichero que vamos a devolver con la herramient sk_tool
     Es un fichero con el mismo nombre pero precedido de "sk_"'''
     if file.find(".py") == -1:
-        sk_file = "sk_"+file+".py"
+        sk_file = "output/sk_"+file+".py"
     else:
-        sk_file = "sk_"+file
+        sk_file = "output/sk_"+file
     open(sk_file, "w").close() #python deberia cerrarlo automaticamente, pero queda mas claro asi
     return sk_file
 
@@ -442,6 +444,7 @@ def prepare_sk_file(file):
     save_init_code = True
     save_post_sk_code = False
     skynnet_configs = []
+    file = "input/"+file
 
     with open(file,'r') as fi:
         line = fi.readline()
@@ -519,7 +522,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
     visit_categorias = VisitLastNeuron()
     visit_categorias.visit(ast_code)
     last_neuron = visit_categorias.last_neuron
-    print(last_neuron)
+    #print(last_neuron)
     if skynnet_config['Type'] == 'MULTICLASS':
         #categorias: las categorias totales, las de la ultima capa _NEURON
         #estas categorias se distribuyen en las subredes dividiendose en grupos tomados de dos en dos
@@ -540,13 +543,17 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         categorias_subred = ((categorias/grupos)*tomados)
         print(f"Categorias por subred: {categorias_subred}")
         reduccion = (categorias/categorias_subred)
-        print(f"la reduccion sera por {reduccion} esto es por defecto TODO: Ajustar de forma mas fina por cada subred")
+        print(f"la reduccion sera por {reduccion} esto es por defecto")
     elif skynnet_config['Type'] == 'BINARYCLASS':
         reduccion = 2
         last_neuron = (last_neuron[0],2)
         num_subredes = 2
         grupos = 2
         categorias = 2
+    elif skynnet_config['Type'] == 'REGRESSION':
+        categorias = last_neuron[1]
+        grupos = num_subredes
+        #reduccion = num_subredes
     #Se reducen los datos
     node_data_vars_reduced = TransformAssignSkVars(reduccion).visit(ast_code)
     #==========================================
@@ -568,7 +575,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         #if not(sk_dict[model_name]["input"]):
         if "input" not in sk_dict[model_name]:
             sk_dict[model_name]["input"] = sk_dict[model_name]["creation"] #Si no usas el modelo funcional TODO: Eliminar en el futuro
-    print(sk_dict)
+    #print(sk_dict)
     #=========================================
     #Quito la prediccion y la guardo para meterla en una funcion nueva
     predictions =  RemovePredictionNode(sk_dict)
@@ -630,6 +637,8 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         inserta_filtro_datos(func_node,"general",sk_dict,categorias,grupos,last_neuron,'MULTICLASS')
     elif skynnet_config['Type'] == 'BINARYCLASS':
         inserta_filtro_datos(func_node,"general",sk_dict,categorias,grupos,last_neuron,'BINARYCLASS')
+    elif skynnet_config['Type'] == 'REGRESSION':
+        inserta_filtro_datos(func_node,"general",sk_dict,categorias,grupos,last_neuron,'REGRESSION')
     fout.write(unparse(fix_missing_locations(func_node)))
     #=========================================
     if hay_prediccion: #si no la hay escribo la funcion con un pass
@@ -705,6 +714,8 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
             inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos,last_neuron,'MULTICLASS')
         elif skynnet_config['Type'] == 'BINARYCLASS':
             inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos,last_neuron,'BINARYCLASS')
+        elif skynnet_config['Type'] == 'REGRESSION':
+            inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos,last_neuron,'REGRESSION')
         fout.write(unparse(fix_missing_locations(pred_func_node)))
 
 
