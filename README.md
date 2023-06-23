@@ -1,4 +1,5 @@
 # sk_tool
+0. Requisitos: ast_comments (descargar via pip >pip install ast-comments)
 1. Descarga de la herramienta sk_tool: https://github.com/SKYNNET-ORG/sk_tool 
 2. Colocas el fichero original en la carpeta inputs, por ejemplo sk_tool/inputs/original.py
 3. Ejecutas: >py sk_tool.py original numero_subredes_deseadas 
