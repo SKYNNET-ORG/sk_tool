@@ -7,50 +7,18 @@ from math import comb,ceil
 
 #Variables globales
 sk_vars_list = ["_EMBEDDING_","_NEURON_","_CELL_","_EPOCHS","_FILTERS_"]
-sk_functions_list = ['summary','compile','fit','predict']
+sk_functions_list = ['summary','compile','fit','predict',]
 sk_creation_model_list = ['Sequential','Model']
 
 num_subredes = 0
 
 funciones_combinatorias='''
 #__CLOUDBOOK:LOCAL__
-def get_combinacion(a, n):
-    from math import comb
-    pairs = []
-    r = 2
-    c = comb(n, r)
-    if c == a:
-        pairs.append((n, r))
-    if n > 1:
-        pairs += get_combinacion(a, n - 1)
-    
-    return pairs
-
-#__CLOUDBOOK:LOCAL__
-def get_categorias(subredes, categorias):
-    results = {}
-    for subred in range(subredes,1,-1):
-        pairs = get_combinacion(subred,categorias)
-        for i in pairs:
-            #results.append(i)
-            results[subred]=i
-    #print(results)
-    #devuelvo el numero deseado si es posible, o uno menor, para que quede una maquina libre
-    if subredes in results:
-        n_subredes = subredes
-    else:
-        n_subredes = max(results.keys())
-
-    return n_subredes,results[n_subredes]
-
-#__CLOUDBOOK:LOCAL__
 def dividir_array_categorias(array, n, m):
     #n = categorias iniciales
     #m = numero de arrays resultantes
     # Obtener las categorias unicas del array original
-    #print(f"Dividiendo un array de {n} categorias en {m} arrays con menos categorias")
     categorias_unicas = np.unique(array)
-    #print(f"Tenemos {categorias_unicas} categorias unicas")
     
     if n < m:
         raise ValueError(f"El numero de categorias original {n} debe ser mayor o igual al numero de arrays de destino {m}.")
@@ -58,36 +26,22 @@ def dividir_array_categorias(array, n, m):
     if m > len(categorias_unicas):
         raise ValueError(f"El numero de categorias unicas {len(categorias_unicas)} no es suficiente para dividirlas en los {m} arrays deseados.")
     
-    # Mezclar las categorias unicas de forma aleatoria
-    #np.random.shuffle(categorias_unicas)
-    
     # Calcular el numero de categorias en cada array de destino
-    categorias_por_array = n // m
-    #print(f"Categorias por array = {categorias_por_array}")
-    
+    categorias_por_array = n // m    
     # Crear los m arrays de destino
     arrays_destino = []
     inicio_categoria = 0
     
     for i in range(m):
-        #print(f"Para el subarray {i}")
         fin_categoria = inicio_categoria + categorias_por_array
-        #print(f"\tCon incicio de categoria = {inicio_categoria} y fin de categoria = {fin_categoria}")
         
         if i < n % m:#
             #print(f"\t\tComo {i} < n({n}) % m({m}), hacemos fin_categoria = {fin_categoria+1}")
             fin_categoria += 1
         
         categorias_array_actual = categorias_unicas[inicio_categoria:fin_categoria]
-        #print(f"\tCategorias array actual = {categorias_array_actual}")
-        # Filtrar el array original para obtener los elementos de las categorias del array actual
-        #array_actual = array[np.isin(array, categorias_array_actual)]
-        #print(f"\tTras filtrar el aaray original para formar array actual queda: {array_actual}")
-        #arrays_destino.append(array_actual)
         arrays_destino.append(categorias_array_actual)
         inicio_categoria = fin_categoria
-        #print(f"\tSe mete el array actual en arrays_destino quedando {arrays_destino}")
-        #print(f"\tSe hace inicio_categoria = fin_categoria: {inicio_categoria}={fin_categoria}")
     return arrays_destino
 
 #__CLOUDBOOK:LOCAL__
@@ -97,7 +51,6 @@ def combinar_arrays(arrays):
         raise ValueError("Se requieren al menos dos arrays para realizar la combinacion.")
     
     combinaciones = list(combinations(arrays, 2))
-    #print(f"Tenemos una lista con todas las combinaciones de los arrays tomados de 2 en 2: {combinaciones}")
     
     arrays_combinados = []
     
@@ -263,7 +216,7 @@ class ModelArrayTransform(ast.NodeTransformer):
         if node.id == self.model_name:
             return ast.Subscript(
                 value=ast.Name(id= self.model_name, ctx=ast.Load()),
-                slice=ast.Index(value=ast.Name(id='i', ctx=ast.Load())),
+                slice=ast.Index(value=ast.Name(id='sk_i', ctx=ast.Load())),
                 ctx=node.ctx
             )       
         return node#self.generic_visit(node)
@@ -326,8 +279,8 @@ def division_datos_multiclass(tipo_datos,categorias,grupos,last_neuron,tipo_red)
         return None
     if tipo_red == 'MULTICLASS':
         division_datos = f'''grupos_de_categorias = dividir_array_categorias({datos_y},{categorias},{grupos})
-{datos_x} = {datos_x}[np.isin({datos_y},combinar_arrays(grupos_de_categorias)[i])]
-{datos_y} = {datos_y}[np.isin({datos_y},combinar_arrays(grupos_de_categorias)[i])]
+{datos_x} = {datos_x}[np.isin({datos_y},combinar_arrays(grupos_de_categorias)[sk_i])]
+{datos_y} = {datos_y}[np.isin({datos_y},combinar_arrays(grupos_de_categorias)[sk_i])]
 print(len({datos_x}),len({datos_y}))
 print(np.unique({datos_y}))
 categorias_incluir = np.unique({datos_y})
@@ -341,7 +294,7 @@ datos_{tipo_datos}_x_1 = {datos_x}[:len({datos_x})//2]
 datos_{tipo_datos}_x_2 = {datos_x}[len({datos_x})//2:]
 datos_{tipo_datos}_y_1 = {datos_y}[:len({datos_y})//2]
 datos_{tipo_datos}_y_2 = {datos_y}[len({datos_y})//2:]
-if i == 1:
+if sk_i == 1:
     {datos_x} = datos_{tipo_datos}_x_1
     {datos_y} = datos_{tipo_datos}_y_1
 else:
@@ -618,7 +571,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         ModelArrayTransform(model_name).visit(node_data_vars_reduced)
     func_node = FunctionDef(
         name="skynnet_block_" + str(block_number),
-        args=arguments(args=[ast.arg(arg='i', annotation=None)], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
+        args=arguments(args=[ast.arg(arg='sk_i', annotation=None)], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
         body=[node_data_vars_reduced],
         decorator_list=[]
     )
@@ -680,7 +633,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
             op=ast.Add(),                                  # Operador de suma
             right=ast.Call(
                 func=ast.Name(id='str', ctx=ast.Load()),    # Función str
-                args=[ast.Name(id='i', ctx=ast.Load())],    # Argumento i
+                args=[ast.Name(id='sk_i', ctx=ast.Load())],    # Argumento i
                 keywords=[]
             )
         )
@@ -701,7 +654,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         #crear la funcion y meterle lo anterior en el body
         pred_func_node = FunctionDef(
             name="skynnet_prediction_block_" + str(block_number),
-            args=arguments(args=[ast.arg(arg='i', annotation=None)], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
+            args=arguments(args=[ast.arg(arg='sk_i', annotation=None)], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
             body=[global_predictions_vars,model_vars,beginremove_cloudbook_label,cloudbook_var_prepare,cloudbook_var_assig, endremove_cloudbook_label,assignation_cb_dict, predictions_assignements],
             decorator_list=[]
         )

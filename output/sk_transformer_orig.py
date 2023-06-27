@@ -56,43 +56,11 @@ y_train = y_train[idx]
 #SKYNNET:BEGIN_BINARYCLASS_ACC_LOSS
 
 #__CLOUDBOOK:LOCAL__
-def get_combinacion(a, n):
-    from math import comb
-    pairs = []
-    r = 2
-    c = comb(n, r)
-    if c == a:
-        pairs.append((n, r))
-    if n > 1:
-        pairs += get_combinacion(a, n - 1)
-    
-    return pairs
-
-#__CLOUDBOOK:LOCAL__
-def get_categorias(subredes, categorias):
-    results = {}
-    for subred in range(subredes,1,-1):
-        pairs = get_combinacion(subred,categorias)
-        for i in pairs:
-            #results.append(i)
-            results[subred]=i
-    #print(results)
-    #devuelvo el numero deseado si es posible, o uno menor, para que quede una maquina libre
-    if subredes in results:
-        n_subredes = subredes
-    else:
-        n_subredes = max(results.keys())
-
-    return n_subredes,results[n_subredes]
-
-#__CLOUDBOOK:LOCAL__
 def dividir_array_categorias(array, n, m):
     #n = categorias iniciales
     #m = numero de arrays resultantes
     # Obtener las categorias unicas del array original
-    #print(f"Dividiendo un array de {n} categorias en {m} arrays con menos categorias")
     categorias_unicas = np.unique(array)
-    #print(f"Tenemos {categorias_unicas} categorias unicas")
     
     if n < m:
         raise ValueError(f"El numero de categorias original {n} debe ser mayor o igual al numero de arrays de destino {m}.")
@@ -100,36 +68,22 @@ def dividir_array_categorias(array, n, m):
     if m > len(categorias_unicas):
         raise ValueError(f"El numero de categorias unicas {len(categorias_unicas)} no es suficiente para dividirlas en los {m} arrays deseados.")
     
-    # Mezclar las categorias unicas de forma aleatoria
-    #np.random.shuffle(categorias_unicas)
-    
     # Calcular el numero de categorias en cada array de destino
-    categorias_por_array = n // m
-    #print(f"Categorias por array = {categorias_por_array}")
-    
+    categorias_por_array = n // m    
     # Crear los m arrays de destino
     arrays_destino = []
     inicio_categoria = 0
     
     for i in range(m):
-        #print(f"Para el subarray {i}")
         fin_categoria = inicio_categoria + categorias_por_array
-        #print(f"	Con incicio de categoria = {inicio_categoria} y fin de categoria = {fin_categoria}")
         
         if i < n % m:#
             #print(f"		Como {i} < n({n}) % m({m}), hacemos fin_categoria = {fin_categoria+1}")
             fin_categoria += 1
         
         categorias_array_actual = categorias_unicas[inicio_categoria:fin_categoria]
-        #print(f"	Categorias array actual = {categorias_array_actual}")
-        # Filtrar el array original para obtener los elementos de las categorias del array actual
-        #array_actual = array[np.isin(array, categorias_array_actual)]
-        #print(f"	Tras filtrar el aaray original para formar array actual queda: {array_actual}")
-        #arrays_destino.append(array_actual)
         arrays_destino.append(categorias_array_actual)
         inicio_categoria = fin_categoria
-        #print(f"	Se mete el array actual en arrays_destino quedando {arrays_destino}")
-        #print(f"	Se hace inicio_categoria = fin_categoria: {inicio_categoria}={fin_categoria}")
     return arrays_destino
 
 #__CLOUDBOOK:LOCAL__
@@ -139,7 +93,6 @@ def combinar_arrays(arrays):
         raise ValueError("Se requieren al menos dos arrays para realizar la combinacion.")
     
     combinaciones = list(combinations(arrays, 2))
-    #print(f"Tenemos una lista con todas las combinaciones de los arrays tomados de 2 en 2: {combinaciones}")
     
     arrays_combinados = []
     
@@ -158,7 +111,7 @@ predictions_0_0 = {}
 #__CLOUDBOOK:NONSHARED__
 model = []
 #__CLOUDBOOK:PARALLEL__
-def skynnet_block_0(i):
+def skynnet_block_0(sk_i):
     global model
     model.append(None)
     _DATA_TRAIN_X = x_train
@@ -178,7 +131,7 @@ def skynnet_block_0(i):
     datos_train_x_2 = _DATA_TRAIN_X[len(_DATA_TRAIN_X) // 2:]
     datos_train_y_1 = _DATA_TRAIN_Y[:len(_DATA_TRAIN_Y) // 2]
     datos_train_y_2 = _DATA_TRAIN_Y[len(_DATA_TRAIN_Y) // 2:]
-    if i == 1:
+    if sk_i == 1:
         _DATA_TRAIN_X = datos_train_x_1
         _DATA_TRAIN_Y = datos_train_y_1
     else:
@@ -189,7 +142,7 @@ def skynnet_block_0(i):
     datos_validate_x_2 = _DATA_VAL_X[len(_DATA_VAL_X) // 2:]
     datos_validate_y_1 = _DATA_VAL_Y[:len(_DATA_VAL_Y) // 2]
     datos_validate_y_2 = _DATA_VAL_Y[len(_DATA_VAL_Y) // 2:]
-    if i == 1:
+    if sk_i == 1:
         _DATA_VAL_X = datos_validate_x_1
         _DATA_VAL_Y = datos_validate_y_1
     else:
@@ -206,19 +159,19 @@ def skynnet_block_0(i):
     x = layers.Dense(_NEURON_1, activation='relu')(x)
     x = layers.Dropout(0.1)(x)
     outputs = layers.Dense(_NEURON_2, activation='softmax')(x)
-    model[i] = keras.Model(inputs=inputs, outputs=outputs)
+    model[sk_i] = keras.Model(inputs=inputs, outputs=outputs)
     print('-----ESTRUCTURA RED ORIGINAL------')
-    print(model[i].summary())
+    print(model[sk_i].summary())
     print('----------------------------------')
     print('Entrenamos sin someter a validacion pues eso lo haremos despues')
-    model[i].compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+    model[sk_i].compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
     start = time.time()
     print('training orig model...')
-    model[i].fit(_DATA_TRAIN_X, _DATA_TRAIN_Y, batch_size=32, epochs=_EPOCHS, validation_data=(_DATA_VAL_X, _DATA_VAL_Y))
+    model[sk_i].fit(_DATA_TRAIN_X, _DATA_TRAIN_Y, batch_size=32, epochs=_EPOCHS, validation_data=(_DATA_VAL_X, _DATA_VAL_Y))
     end = time.time()
     print(' original: tiempo transcurrido (segundos) =', end - start)
 #__CLOUDBOOK:PARALLEL__
-def skynnet_prediction_block_0(i):
+def skynnet_prediction_block_0(sk_i):
     global predictions_0_0
     global model
     #__CLOUDBOOK:BEGINREMOVE__
@@ -228,19 +181,19 @@ def skynnet_prediction_block_0(i):
     __CLOUDBOOK__['agent'] = {}
     __CLOUDBOOK__['agent']['id'] = 'agente_skynnet'
     #__CLOUDBOOK:ENDREMOVE__
-    label = __CLOUDBOOK__['agent']['id'] + str(i)
+    label = __CLOUDBOOK__['agent']['id'] + str(sk_i)
     datos_test_x_1 = _DATA_TEST_X[:len(_DATA_TEST_X) // 2]
     datos_test_x_2 = _DATA_TEST_X[len(_DATA_TEST_X) // 2:]
     datos_test_y_1 = _DATA_TEST_Y[:len(_DATA_TEST_Y) // 2]
     datos_test_y_2 = _DATA_TEST_Y[len(_DATA_TEST_Y) // 2:]
-    if i == 1:
+    if sk_i == 1:
         _DATA_TEST_X = datos_test_x_1
         _DATA_TEST_Y = datos_test_y_1
     else:
         _DATA_TEST_X = datos_test_x_2
         _DATA_TEST_Y = datos_test_y_2
     _NEURON_2 = 2
-    predictions_0_0[label] = model[i].predict(_DATA_TEST_X)
+    predictions_0_0[label] = model[sk_i].predict(_DATA_TEST_X)
 
 
 #SKYNNET:END
