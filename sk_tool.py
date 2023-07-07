@@ -662,7 +662,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         #insertar el data_test
         for model_name in sk_dict.keys():
             to_insert_nodes = sk_dict[model_name]['data_test']
-            pred_func_node.body.insert(3,to_insert_nodes)
+            pred_func_node.body.insert(2,to_insert_nodes)
         if skynnet_config['Type'] == 'MULTICLASS':
             inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos,last_neuron,'MULTICLASS')
         elif skynnet_config['Type'] == 'BINARYCLASS':

@@ -174,9 +174,9 @@ def skynnet_block_0(sk_i):
 def skynnet_prediction_block_0(sk_i):
     global predictions_0_0
     global model
-    #__CLOUDBOOK:BEGINREMOVE__
     _DATA_TEST_X = x_train
     _DATA_TEST_Y = y_train
+    #__CLOUDBOOK:BEGINREMOVE__
     __CLOUDBOOK__ = {}
     __CLOUDBOOK__['agent'] = {}
     __CLOUDBOOK__['agent']['id'] = 'agente_skynnet'
