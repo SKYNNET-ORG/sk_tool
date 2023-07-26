@@ -64,6 +64,7 @@ def combinar_arrays(arrays):
 predictions_0_0 = {}
 #__CLOUDBOOK:NONSHARED__
 model = []
+precision_compuesta = []
 #__CLOUDBOOK:PARALLEL__
 def skynnet_block_0(sk_i):
     global model
@@ -72,11 +73,11 @@ def skynnet_block_0(sk_i):
     _DATA_TRAIN_Y = y_train
     _DATA_TEST_X = x_test
     _DATA_TEST_Y = y_test
-    _NEURON_1 = 64
-    _NEURON_2 = 30
-    _NEURON_3 = 5
-    _EPOCHS = 5
-    grupos_de_categorias = dividir_array_categorias(_DATA_TRAIN_Y, 10, 4)
+    _NEURON_1 = 86
+    _NEURON_2 = 40
+    _NEURON_3 = 7
+    _EPOCHS = 7
+    grupos_de_categorias = dividir_array_categorias(_DATA_TRAIN_Y, 10, 3)
     _DATA_TRAIN_X = _DATA_TRAIN_X[np.isin(_DATA_TRAIN_Y, combinar_arrays(grupos_de_categorias)[sk_i])]
     _DATA_TRAIN_Y = _DATA_TRAIN_Y[np.isin(_DATA_TRAIN_Y, combinar_arrays(grupos_de_categorias)[sk_i])]
     print(len(_DATA_TRAIN_X), len(_DATA_TRAIN_Y))
@@ -106,27 +107,19 @@ def skynnet_prediction_block_0(sk_i):
     __CLOUDBOOK__['agent']['id'] = 'agente_skynnet'
     #__CLOUDBOOK:ENDREMOVE__
     label = __CLOUDBOOK__['agent']['id'] + str(sk_i)
-    grupos_de_categorias = dividir_array_categorias(_DATA_TEST_Y, 10, 4)
-    #_DATA_TEST_X = _DATA_TEST_X[np.isin(_DATA_TEST_Y, combinar_arrays(grupos_de_categorias)[sk_i])]
-    #_DATA_TEST_Y = _DATA_TEST_Y[np.isin(_DATA_TEST_Y, combinar_arrays(grupos_de_categorias)[sk_i])]
-    #print(len(_DATA_TEST_X), len(_DATA_TEST_Y))
-    #print(np.unique(_DATA_TEST_Y))
+    grupos_de_categorias = dividir_array_categorias(_DATA_TEST_Y, 10, 3)
     categorias_incluir = combinar_arrays(grupos_de_categorias)[sk_i]
-    #etiquetas_consecutivas = np.arange(len(categorias_incluir))
-    #_DATA_TEST_Y = np.searchsorted(categorias_incluir, _DATA_TEST_Y)
-    #_NEURON_3 = len(np.unique(_DATA_TEST_Y))
-    label+=f"_{categorias_incluir}"
-    prediction = model[sk_i].predict(_DATA_TEST_X)
-    #predictions_0_0[label] = model[sk_i].predict(_DATA_TEST_X)
-    categorias_str = label[label.find("[")+1:label.find("]")]
-    categorias = np.fromstring(categorias_str, dtype=int,sep=' ')
+    label += f'{categorias_incluir}'
+    prediction = model[sk_i].predict(_DATA_TEST_X, verbose=0)
+    categorias_str = label[label.find('[') + 1:label.find(']')]
+    categorias = np.fromstring(categorias_str, dtype=int, sep=' ')
     resul = []
-    for i,pred in enumerate(prediction):
-        #print(f"prediccion individual {pred}")
+    for (i, pred) in enumerate(prediction):
         array_final = np.ones(10)
         array_final[categorias] = pred
         resul.append(array_final)
     predictions_0_0[label] = resul
+
 
 #SKYNNET:END
 
@@ -134,52 +127,32 @@ print("End of program")
 
 #__CLOUDBOOK:DU0__
 def skynnet_global_0():
-    for i in range(6):
+    for i in range(3):
         skynnet_block_0(i)
     #__CLOUDBOOK:SYNC__
 #__CLOUDBOOK:DU0__
 def skynnet_prediction_global_0():
-    for i in range(6):
+    for i in range(3):
         skynnet_prediction_block_0(i)
     #__CLOUDBOOK:SYNC__
+    global precision_compuesta
+    valores = np.array(list(predictions_0_0.values()))
+    resultado = np.prod(valores, axis=0)
+    correctas = 0
+    total = 0
+    for i in range(len(y_test)):
+        if y_test[i] == np.argmax(resultado[i]):
+            correctas += 1
+        total += 1
+    precision_compuesta.append(correctas / total)
+    print('La prediccion compuesta es: ', precision_compuesta)
 
 
 #__CLOUDBOOK:MAIN__
 def main():
     skynnet_global_0()
     skynnet_prediction_global_0()
-    print("Empezamos con las predicciones")
-    print("==============================")
-    #resultado = None
-    for prediction in predictions_0_0.keys():
-        print(f"{len(y_test)}, {len(y_test.shape)}")
-        print(f"prediction: {prediction}")
-        #resultado = tf.multiply(prediction)
-        for i in range(10):
-            prediccion = predictions_0_0[prediction]
-            print(f"Valor {y_test[i]} se predice {np.argmax(prediccion[i])}")
-    valores = np.array(list(predictions_0_0.values()))
-    resultado = np.prod(valores,axis=0)
-    print(resultado)
-    # Redondear las predicciones a la clase más probable
-    predicciones_clases = np.argmax(resultado, axis=1)
-    # Comparar con las etiquetas reales
-    #etiquetas_reales = np.argmax(y_test, axis=1)
-    # Calcular la precisión
-    precision = np.mean(predicciones_clases == y_test)
 
-    print("Precisión:", precision)
-    '''lista_predicciones = list(predictions_0_0.keys())
-    resultado = predictions_0_0[lista_predicciones[0]]
-    lista_predicciones = lista_predicciones[1:]
-    for prediccion in lista_predicciones:
-        resultado = np.multiply(predictions_0_0[prediccion],resultado)
-    print(f"{len(y_test)}, {len(y_test.shape)}")
-    print(f"{len(resultado)}, {len(resultado)}")
-    for i in range(10):
-        print(f"Valor {y_test[i]} se predice {np.argmax(resultado[i])}")
-        print(f"Valor {y_test[i]} se predice {resultado[i]}")
-'''
 if __name__ == '__main__':
     main()
 

@@ -306,6 +306,49 @@ else:
         division_datos = f'''#TODO'''
     return fix_missing_locations(parse(division_datos))
 
+def division_datos_predict(tipo_datos,categorias,grupos,last_neuron,tipo_red):
+    if tipo_datos == "train":
+        datos_x = "_DATA_TRAIN_X"
+        datos_y = "_DATA_TRAIN_Y"
+    elif tipo_datos== "validate":
+        datos_x = "_DATA_VAL_X"
+        datos_y = "_DATA_VAL_Y"
+    elif tipo_datos == "test":
+        datos_x = "_DATA_TEST_X"
+        datos_y = "_DATA_TEST_Y"
+    else:
+        print("Warning unknown data type")
+        return None
+    if tipo_red == 'MULTICLASS':
+        division_datos = f'''grupos_de_categorias = dividir_array_categorias({datos_y},{categorias},{grupos})
+categorias_incluir = combinar_arrays(grupos_de_categorias)[sk_i]
+label+=f"'''+"{categorias_incluir}"+'''"
+prediction = model[sk_i].predict(_DATA_TEST_X, verbose=0)
+categorias_str = label[label.find("[")+1:label.find("]")]
+categorias = np.fromstring(categorias_str, dtype=int,sep=' ')
+resul = []
+for i,pred in enumerate(prediction):
+    array_final = np.ones(10)
+    array_final[categorias] = pred
+    resul.append(array_final)
+'''
+    elif tipo_red == 'BINARYCLASS':
+        division_datos = f'''
+datos_{tipo_datos}_x_1 = {datos_x}[:len({datos_x})//2]
+datos_{tipo_datos}_x_2 = {datos_x}[len({datos_x})//2:]
+datos_{tipo_datos}_y_1 = {datos_y}[:len({datos_y})//2]
+datos_{tipo_datos}_y_2 = {datos_y}[len({datos_y})//2:]
+if sk_i == 1:
+    {datos_x} = datos_{tipo_datos}_x_1
+    {datos_y} = datos_{tipo_datos}_y_1
+else:
+    {datos_x} = datos_{tipo_datos}_x_2
+    {datos_y} = datos_{tipo_datos}_y_2
+{last_neuron[0]} = 2
+        '''
+    elif tipo_red == 'REGRESSION':
+        division_datos = f'''#TODO'''
+    return fix_missing_locations(parse(division_datos))
 
 def inserta_nodo(sk_dict,model_name,to_insert_node,node_destiny,last_neuron):
     
@@ -342,7 +385,8 @@ def inserta_filtro_datos(nodo_destino,tipo_funcion,sk_dict,categorias,grupos,las
     elif tipo_funcion == "predict":
         for model_name in sk_dict.keys():
             if sk_dict[model_name]["data_test"] != []:
-                to_insert_node = division_datos_multiclass("test",categorias,grupos,last_neuron,tipo_red)
+                #to_insert_node = division_datos_multiclass("test",categorias,grupos,last_neuron,tipo_red)
+                to_insert_node = division_datos_predict("test",categorias,grupos,last_neuron,tipo_red)
                 nodo_destino.body.insert(8,to_insert_node) #En el predict es distinto, se exactamente donde insertar
     else:
         print(f"Error: el tipo de funcion no es valido ({tipo_funcion})")
@@ -562,6 +606,9 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         nonshared_models_declarations.append(model_name_expression)
     fixed_nonshared = map(lambda x: unparse(fix_missing_locations(x)), nonshared_models_declarations)
     fout.writelines(fixed_nonshared)
+    #====================================== Añado la precision compuesta como una variable nonshared
+    precision_compuesta= parse("precision_compuesta=[]")
+    fout.write(unparse(fix_missing_locations(Expr(value = precision_compuesta))))
     #=========================================
     #Escribo la funcion skynnet block, que tiene todos los modelos del bloque
     parallel_cloudbook_label = Expr(value=Comment(value='#__CLOUDBOOK:PARALLEL__'))
@@ -642,7 +689,8 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         for i,model_name in enumerate(sk_dict.keys()):
             nombre = prediction_vars[i]
             #valor = sk_dict[model_name]['predict']
-            valor = ModelArrayTransform(model_name).visit(sk_dict[model_name]['predict']) #Ahora cambia por array de modelos
+            #valor = ModelArrayTransform(model_name).visit(sk_dict[model_name]['predict']) #Ahora cambia por array de modelos
+            valor = Name(id="resul", ctx=ast.Load())#ModelArrayTransform(model_name).visit(sk_dict[model_name]['predict']) #Ahora cambia por array de modelos
             prediction_var_target = Subscript(
                 value=Name(id=nombre,ctx=Load()),
                 slice=Index(value=label_var)
@@ -742,11 +790,24 @@ def write_sk_block_invocation_code(block_number,fo):
         body=[skynnet_pred_call],
         orelse=[],
     )
+    #Prediccion compuesta
+    codigo_prediccion_compuesta=f'''global precision_compuesta
+valores = np.array(list(predictions_{block_number}_0.values()))
+resultado = np.prod(valores,axis=0)
+correctas = 0
+total = 0
+for i in range(len(y_test)):
+    if y_test[i] == np.argmax(resultado[i]):
+        correctas+=1
+    total+=1
+precision_compuesta.append(correctas/total)
+print('La prediccion compuesta es: ', precision_compuesta)'''
+    codigo_prediccion_compuesta = fix_missing_locations(parse(codigo_prediccion_compuesta))
     #funcion
     func_pred_def = FunctionDef(
         name=f'skynnet_prediction_global_{block_number}',
         args=arguments(args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
-        body=[for_pred_loop,comment_sync],
+        body=[for_pred_loop,comment_sync,codigo_prediccion_compuesta],
         decorator_list=[],
         returns=None,
     )
