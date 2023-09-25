@@ -52,8 +52,10 @@ x_val = keras.preprocessing.sequence.pad_sequences(x_val, maxlen=maxlen)
 idx = np.random.permutation(len(x_train))
 x_train = x_train[idx]
 y_train = y_train[idx]
+x_test = x_train
+y_test = y_train
 
-#SKYNNET:BEGIN_BINARYCLASS_ACC_LOSS
+#SKYNNET:BEGIN_BINARYCLASS_LOSS
 
 _DATA_TRAIN_X = x_train
 _DATA_TRAIN_Y = y_train
@@ -64,7 +66,7 @@ _DATA_TEST_Y = y_train
 
 _EMBEDDING_ = 32
 _NEURON_1 = 20
-_NEURON_2 = 1
+_NEURON_2 = 2
 _EPOCHS = 2
 _BATCH = 32
 

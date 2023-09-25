@@ -71,6 +71,7 @@ def combinar_arrays(arrays):
 predictions_0_0 = {}
 #__CLOUDBOOK:NONSHARED__
 cnn_orig = []
+precision_compuesta = []
 #__CLOUDBOOK:PARALLEL__
 def skynnet_block_0(sk_i):
     global cnn_orig
@@ -79,17 +80,20 @@ def skynnet_block_0(sk_i):
     _DATA_TRAIN_Y = y_train
     _DATA_TEST_X = x_test
     _DATA_TEST_Y = y_test
-    _FILTERS_1 = 13
-    _FILTERS_2 = 32
-    _FILTERS_3 = 32
-    _NEURON_1 = 32
-    _NEURON_2 = 5
-    _EPOCHS = 5
-    grupos_de_categorias = dividir_array_categorias(_DATA_TRAIN_Y, 10, 4)
-    _DATA_TRAIN_X = _DATA_TRAIN_X[np.isin(_DATA_TRAIN_Y, combinar_arrays(grupos_de_categorias)[sk_i])]
-    _DATA_TRAIN_Y = _DATA_TRAIN_Y[np.isin(_DATA_TRAIN_Y, combinar_arrays(grupos_de_categorias)[sk_i])]
-    print(len(_DATA_TRAIN_X), len(_DATA_TRAIN_Y))
-    print(np.unique(_DATA_TRAIN_Y))
+    _FILTERS_1 = 17
+    _FILTERS_2 = 43
+    _FILTERS_3 = 43
+    _NEURON_1 = 43
+    _NEURON_2 = 7
+    _EPOCHS = 7
+    grupos_de_categorias = dividir_array_categorias(_DATA_TRAIN_Y, 10, 3)
+    combinacion_arrays = combinar_arrays(grupos_de_categorias)[sk_i]
+    _DATA_TRAIN_X = _DATA_TRAIN_X[np.isin(_DATA_TRAIN_Y, combinacion_arrays)]
+    _DATA_TRAIN_Y = _DATA_TRAIN_Y[np.isin(_DATA_TRAIN_Y, combinacion_arrays)]
+    print('======================================')
+    print('Skynnet Info: Longitud de los datos de la subred (datos,etiquetas):', len(_DATA_TRAIN_X), len(_DATA_TRAIN_Y))
+    print('Skynnet Info: Categorias de esta subred', np.unique(_DATA_TRAIN_Y))
+    print('======================================')
     categorias_incluir = np.unique(_DATA_TRAIN_Y)
     etiquetas_consecutivas = np.arange(len(categorias_incluir))
     _DATA_TRAIN_Y = np.searchsorted(categorias_incluir, _DATA_TRAIN_Y)
@@ -114,30 +118,51 @@ def skynnet_prediction_block_0(sk_i):
     __CLOUDBOOK__['agent']['id'] = 'agente_skynnet'
     #__CLOUDBOOK:ENDREMOVE__
     label = __CLOUDBOOK__['agent']['id'] + str(sk_i)
-    grupos_de_categorias = dividir_array_categorias(_DATA_TEST_Y, 10, 4)
-    _DATA_TEST_X = _DATA_TEST_X[np.isin(_DATA_TEST_Y, combinar_arrays(grupos_de_categorias)[sk_i])]
-    _DATA_TEST_Y = _DATA_TEST_Y[np.isin(_DATA_TEST_Y, combinar_arrays(grupos_de_categorias)[sk_i])]
-    print(len(_DATA_TEST_X), len(_DATA_TEST_Y))
-    print(np.unique(_DATA_TEST_Y))
-    categorias_incluir = np.unique(_DATA_TEST_Y)
-    etiquetas_consecutivas = np.arange(len(categorias_incluir))
-    _DATA_TEST_Y = np.searchsorted(categorias_incluir, _DATA_TEST_Y)
-    _NEURON_2 = len(np.unique(_DATA_TEST_Y))
-    predictions_0_0[label] = cnn_orig[sk_i].predict(_DATA_TEST_X)
+    grupos_de_categorias = dividir_array_categorias(_DATA_TEST_Y, 10, 3)
+    categorias_incluir = combinar_arrays(grupos_de_categorias)[sk_i]
+    label += f'{categorias_incluir}'
+    prediction = cnn_orig[sk_i].predict(_DATA_TEST_X, verbose=1)
+    categorias_str = label[label.find('[') + 1:label.find(']')]
+    categorias = np.fromstring(categorias_str, dtype=int, sep=' ')
+    resul = []
+    for (i, pred) in enumerate(prediction):
+        array_final = np.ones(10)
+        array_final[categorias] = pred
+        resul.append(array_final)
+    #MSSE measure to get
+    predictions_0_0[label] = resul
 
 
 #SKYNNET:END
 
 #__CLOUDBOOK:DU0__
 def skynnet_global_0():
-    for i in range(6):
+    for i in range(3):
         skynnet_block_0(i)
     #__CLOUDBOOK:SYNC__
 #__CLOUDBOOK:DU0__
 def skynnet_prediction_global_0():
-    for i in range(6):
+    for i in range(3):
         skynnet_prediction_block_0(i)
     #__CLOUDBOOK:SYNC__
+    global precision_compuesta
+    valores = np.array(list(predictions_0_0.values()))
+    resultado = np.prod(valores, axis=0)
+    correctas = 0
+    total = 0
+    for i in range(len(y_test)):
+        if y_test[i] == np.argmax(resultado[i]):
+            correctas += 1
+        total += 1
+    precision_compuesta.append(correctas / total)
+    print('============================================')
+    print('Skynnet Info: La accuracy de la prediccion compuesta es: ', precision_compuesta)
+    print('============================================')
+    scce = tf.keras.losses.SparseCategoricalCrossentropy()
+    scce_orig = scce(y_test, resultado).numpy()
+    print('============================================')
+    print('Skynnet Info: La loss compuesta es: ', scce_orig)
+    print('============================================')
 
 
 #__CLOUDBOOK:MAIN__

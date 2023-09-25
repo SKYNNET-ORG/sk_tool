@@ -264,7 +264,7 @@ class GetModelDataVars(ast.NodeVisitor):
         if len(node.targets)==1 and node.targets[0].id in self.data_vars_test:
             self.dict_modelos[self.model_name]["data_test"].append(node)
 
-def division_datos_multiclass(tipo_datos,categorias,grupos,last_neuron,tipo_red):
+def division_datos_fit(tipo_datos,categorias,grupos,last_neuron,tipo_red):
     if tipo_datos == "train":
         datos_x = "_DATA_TRAIN_X"
         datos_y = "_DATA_TRAIN_Y"
@@ -279,10 +279,13 @@ def division_datos_multiclass(tipo_datos,categorias,grupos,last_neuron,tipo_red)
         return None
     if tipo_red == 'MULTICLASS':
         division_datos = f'''grupos_de_categorias = dividir_array_categorias({datos_y},{categorias},{grupos})
-{datos_x} = {datos_x}[np.isin({datos_y},combinar_arrays(grupos_de_categorias)[sk_i])]
-{datos_y} = {datos_y}[np.isin({datos_y},combinar_arrays(grupos_de_categorias)[sk_i])]
-print(len({datos_x}),len({datos_y}))
-print(np.unique({datos_y}))
+combinacion_arrays = combinar_arrays(grupos_de_categorias)[sk_i]
+{datos_x} = {datos_x}[np.isin({datos_y},combinacion_arrays)]
+{datos_y} = {datos_y}[np.isin({datos_y},combinacion_arrays)]
+print("======================================")
+print("Skynnet Info: Longitud de los datos de la subred (datos,etiquetas):",len({datos_x}),len({datos_y}))
+print("Skynnet Info: Categorias de esta subred",np.unique({datos_y}))
+print("======================================")
 categorias_incluir = np.unique({datos_y})
 etiquetas_consecutivas = np.arange(len(categorias_incluir))
 {datos_y} = np.searchsorted(categorias_incluir, {datos_y})
@@ -303,10 +306,12 @@ else:
 {last_neuron[0]} = 2
         '''
     elif tipo_red == 'REGRESSION':
-        division_datos = f'''#TODO'''
+        division_datos = f'''#Is not neccesary to divide data'''
     return fix_missing_locations(parse(division_datos))
 
-def division_datos_predict(tipo_datos,categorias,grupos,last_neuron,tipo_red):
+def division_datos_predict(tipo_datos,categorias,grupos,last_neuron,tipo_red,model_name,medida_compuesta):
+    '''Ya no es division de datos, es la adaptacion del predict para sacar el compuesto
+    Medida compuesta puede ser: "acc", "loss","acc,loss"'''
     if tipo_datos == "train":
         datos_x = "_DATA_TRAIN_X"
         datos_y = "_DATA_TRAIN_Y"
@@ -319,35 +324,73 @@ def division_datos_predict(tipo_datos,categorias,grupos,last_neuron,tipo_red):
     else:
         print("Warning unknown data type")
         return None
-    if tipo_red == 'MULTICLASS':
-        division_datos = f'''grupos_de_categorias = dividir_array_categorias({datos_y},{categorias},{grupos})
+    if tipo_red == 'MULTICLASS':#MANDO SIEMPRE ACCURACY ADAPT PORQUE SIEMPRE HAY QUE EXPANDIR LA PREDICCION
+        no_measure = f'''
+prediction = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
+resul = prediction
+'''
+        accuracy_adapt = f'''grupos_de_categorias = dividir_array_categorias({datos_y},{categorias},{grupos})
 categorias_incluir = combinar_arrays(grupos_de_categorias)[sk_i]
 label+=f"'''+"{categorias_incluir}"+'''"
-prediction = model[sk_i].predict(_DATA_TEST_X, verbose=0)
+prediction = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
 categorias_str = label[label.find("[")+1:label.find("]")]
 categorias = np.fromstring(categorias_str, dtype=int,sep=' ')
 resul = []
 for i,pred in enumerate(prediction):
-    array_final = np.ones(10)
+    array_final = np.ones('''+f"{categorias}"+''')
     array_final[categorias] = pred
     resul.append(array_final)
 '''
+        loss_adapt = f'''
+#MSSE measure to get
+'''
+        if medida_compuesta == "acc,loss":
+            division_datos = accuracy_adapt+loss_adapt
+        elif medida_compuesta == "acc":
+            division_datos = accuracy_adapt
+        elif medida_compuesta == "loss":
+            division_datos = accuracy_adapt#no_measure+loss_adapt
+        else:
+            division_datos = no_measure
     elif tipo_red == 'BINARYCLASS':
-        division_datos = f'''
-datos_{tipo_datos}_x_1 = {datos_x}[:len({datos_x})//2]
-datos_{tipo_datos}_x_2 = {datos_x}[len({datos_x})//2:]
-datos_{tipo_datos}_y_1 = {datos_y}[:len({datos_y})//2]
-datos_{tipo_datos}_y_2 = {datos_y}[len({datos_y})//2:]
-if sk_i == 1:
-    {datos_x} = datos_{tipo_datos}_x_1
-    {datos_y} = datos_{tipo_datos}_y_1
-else:
-    {datos_x} = datos_{tipo_datos}_x_2
-    {datos_y} = datos_{tipo_datos}_y_2
-{last_neuron[0]} = 2
-        '''
+        no_measure = f'''
+prediction = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
+resul = prediction
+'''
+        accuracy_adapt = f'''
+prediction = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
+categorias = [0,1]
+resul = []
+for i,pred in enumerate(prediction):
+    array_final = np.ones('''+f"{categorias}"+''')
+    array_final[categorias] = pred
+    resul.append(array_final)
+'''
+        loss_adapt = f'''
+#MSSE measure to get
+'''
+        if medida_compuesta == "acc,loss":
+            division_datos = accuracy_adapt#accuracy_adapt+loss_adapt
+        elif medida_compuesta == "acc":
+            division_datos = accuracy_adapt
+        elif medida_compuesta == "loss":
+            division_datos = accuracy_adapt#no_measure+loss_adapt
+        else:
+            division_datos = no_measure
     elif tipo_red == 'REGRESSION':
-        division_datos = f'''#TODO'''
+        division_datos = f'''
+prediction = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
+resul = prediction
+'''
+        division_datos_not = f'''
+prediction = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
+categorias = [0,1]
+resul = []
+for i,pred in enumerate(prediction):
+    array_final = np.ones('''+f"{categorias}"+''')
+    array_final[categorias] = pred
+    resul.append(array_final)
+'''
     return fix_missing_locations(parse(division_datos))
 
 def inserta_nodo(sk_dict,model_name,to_insert_node,node_destiny,last_neuron):
@@ -371,22 +414,22 @@ def inserta_nodo(sk_dict,model_name,to_insert_node,node_destiny,last_neuron):
 
 
 
-def inserta_filtro_datos(nodo_destino,tipo_funcion,sk_dict,categorias,grupos,last_neuron,tipo_red):
-    '''tipo funcion: general(train y val) predict(test)
+def inserta_filtro_datos(nodo_destino,tipo_funcion,sk_dict,categorias,grupos,last_neuron,tipo_red, medida_compuesta):
+    '''tipo funcion: general(train y val) predict(test), general es la division para entrenar
     nodo_destino: nodo tipo funcion en el que hay que insertar'''
     if tipo_funcion=="general":
         for model_name in sk_dict.keys():
             if sk_dict[model_name]["data_train"] != []:
-                to_insert_node = division_datos_multiclass("train",categorias,grupos,last_neuron,tipo_red)
+                to_insert_node = division_datos_fit("train",categorias,grupos,last_neuron,tipo_red)
                 inserta_nodo(sk_dict,model_name,to_insert_node,nodo_destino,last_neuron)
             if sk_dict[model_name]["data_val"] != []:
-                to_insert_node = division_datos_multiclass("validate",categorias,grupos,last_neuron,tipo_red)
+                to_insert_node = division_datos_fit("validate",categorias,grupos,last_neuron,tipo_red)
                 inserta_nodo(sk_dict,model_name,to_insert_node,nodo_destino,last_neuron)
     elif tipo_funcion == "predict":
         for model_name in sk_dict.keys():
             if sk_dict[model_name]["data_test"] != []:
-                #to_insert_node = division_datos_multiclass("test",categorias,grupos,last_neuron,tipo_red)
-                to_insert_node = division_datos_predict("test",categorias,grupos,last_neuron,tipo_red)
+                #to_insert_node = division_datos_fit("test",categorias,grupos,last_neuron,tipo_red)
+                to_insert_node = division_datos_predict("test",categorias,grupos,last_neuron,tipo_red,model_name, medida_compuesta)
                 nodo_destino.body.insert(8,to_insert_node) #En el predict es distinto, se exactamente donde insertar
     else:
         print(f"Error: el tipo de funcion no es valido ({tipo_funcion})")
@@ -550,7 +593,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
     elif skynnet_config['Type'] == 'REGRESSION':
         categorias = last_neuron[1]
         grupos = num_subredes
-        #reduccion = num_subredes
+        reduccion = num_subredes
     #Se reducen los datos
     node_data_vars_reduced = TransformAssignSkVars(reduccion).visit(ast_code)
     #==========================================
@@ -633,12 +676,13 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
     '''for model_name in sk_dict.keys():
         ModelArrayTransform(model_name).visit(func_node)'''
     #Meto antes del nodo de creacion del modelo, el codigo para calcular la division de los datos
+    composed_measure = "" #Esta variable solo interesa en el predict, es para ver si calculo accuracy o loss o ambos
     if skynnet_config['Type'] == 'MULTICLASS':
-        inserta_filtro_datos(func_node,"general",sk_dict,categorias,grupos,last_neuron,'MULTICLASS')
+        inserta_filtro_datos(func_node,"general",sk_dict,categorias,grupos,last_neuron,'MULTICLASS', composed_measure)
     elif skynnet_config['Type'] == 'BINARYCLASS':
-        inserta_filtro_datos(func_node,"general",sk_dict,categorias,grupos,last_neuron,'BINARYCLASS')
+        inserta_filtro_datos(func_node,"general",sk_dict,categorias,grupos,last_neuron,'BINARYCLASS', composed_measure)
     elif skynnet_config['Type'] == 'REGRESSION':
-        inserta_filtro_datos(func_node,"general",sk_dict,categorias,grupos,last_neuron,'REGRESSION')
+        inserta_filtro_datos(func_node,"general",sk_dict,categorias,grupos,last_neuron,'REGRESSION', composed_measure)
     fout.write(unparse(fix_missing_locations(func_node)))
     #=========================================
     if hay_prediccion: #si no la hay escribo la funcion con un pass
@@ -708,22 +752,33 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         )
         fout.write("\n")
         #insertar el data_test
+        #print(skynnet_config['Options'])
+        measure_options = skynnet_config['Options']        
+        if "ACC" in measure_options and "LOSS" in measure_options:
+            composed_measure = "acc,loss"
+        if "ACC" in measure_options and "LOSS" not in measure_options:
+            composed_measure = "acc"
+        if "ACC" not in measure_options and "LOSS" in measure_options:
+            composed_measure = "loss"
+        if "ACC" not in measure_options and "LOSS" not in measure_options:
+            composed_measure = ""
+        #print(composed_measure)
         for model_name in sk_dict.keys():
             to_insert_nodes = sk_dict[model_name]['data_test']
             pred_func_node.body.insert(2,to_insert_nodes)
         if skynnet_config['Type'] == 'MULTICLASS':
-            inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos,last_neuron,'MULTICLASS')
+            inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos,last_neuron,'MULTICLASS', composed_measure)
         elif skynnet_config['Type'] == 'BINARYCLASS':
-            inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos,last_neuron,'BINARYCLASS')
+            inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos,last_neuron,'BINARYCLASS', composed_measure)
         elif skynnet_config['Type'] == 'REGRESSION':
-            inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos,last_neuron,'REGRESSION')
+            inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos,last_neuron,'REGRESSION', composed_measure)
         fout.write(unparse(fix_missing_locations(pred_func_node)))
 
 
     fout.write('\n\n')
     return num_subredes
 
-def write_sk_block_invocation_code(block_number,fo):
+def write_sk_block_invocation_code(block_number,fo, skynnet_config):
     '''Escribe la funcion con el bucle, va en la du_0
     #DU_0
     def skynnet_global_n():
@@ -733,8 +788,18 @@ def write_sk_block_invocation_code(block_number,fo):
       for i in subredes:
         skynnet()
         #cloudbook:sync
-    TODO: El predicted, sera otra funcion de du0 que hace un bucle llamando 
-    a las predicted y luego hace global predicted y return de ese predicted'''
+    '''
+    #=====================================
+    measure_options = skynnet_config['Options']        
+    if "ACC" in measure_options and "LOSS" in measure_options:
+        composed_measure = "acc,loss"
+    if "ACC" in measure_options and "LOSS" not in measure_options:
+        composed_measure = "acc"
+    if "ACC" not in measure_options and "LOSS" in measure_options:
+        composed_measure = "loss"
+    if "ACC" not in measure_options and "LOSS" not in measure_options:
+        composed_measure = ""
+    #=====================================
     nodos_ast = []
     #creo nodo de comentario, y de funcion, y con el cuerpo, como es por defecto, lo puedo hacer con texto y parsearlo. y hacerle un fix missing locations o algo asi
     comment_du0 = Comment(value = "#__CLOUDBOOK:DU0__")
@@ -791,7 +856,10 @@ def write_sk_block_invocation_code(block_number,fo):
         orelse=[],
     )
     #Prediccion compuesta
-    codigo_prediccion_compuesta=f'''global precision_compuesta
+    codigo_medidas_extra='''
+#No measures in pragma, nothing to add
+'''
+    codigo_prediccion_compuesta =f'''global precision_compuesta
 valores = np.array(list(predictions_{block_number}_0.values()))
 resultado = np.prod(valores,axis=0)
 correctas = 0
@@ -801,13 +869,47 @@ for i in range(len(y_test)):
         correctas+=1
     total+=1
 precision_compuesta.append(correctas/total)
-print('La prediccion compuesta es: ', precision_compuesta)'''
-    codigo_prediccion_compuesta = fix_missing_locations(parse(codigo_prediccion_compuesta))
+print("============================================")
+print('Skynnet Info: La accuracy de la prediccion compuesta es: ', precision_compuesta)
+print("============================================")
+'''
+    prediccion_aux = f'''
+global precision_compuesta
+valores = np.array(list(predictions_{block_number}_0.values()))
+resultado = np.prod(valores,axis=0)
+'''
+    codigo_loss_compuesta = f'''
+scce = tf.keras.losses.SparseCategoricalCrossentropy()
+scce_orig=scce(y_test, resultado).numpy()
+print('============================================')
+print('Skynnet Info: La loss compuesta es: ', scce_orig)
+print('============================================')
+'''
+    codigo_loss_compuesta_regresion = f'''
+bce = tf.keras.losses.BinaryCrossentropy()
+bce_orig=bce(y_test, resultado)
+print('============================================')
+print('Skynnet Info: La loss compuesta es: ', bce_orig)
+print('============================================')
+'''
+    if composed_measure == "acc,loss": #si es loss y regresion, la loss esta mal, pero peta en la prediccion, no afecta
+        codigo_medidas_extra = codigo_prediccion_compuesta+codigo_loss_compuesta
+    elif composed_measure == "acc":
+        codigo_medidas_extra = codigo_prediccion_compuesta
+    elif composed_measure == "loss" and skynnet_config['Type'] == 'MULTICLASS' :
+        codigo_medidas_extra = prediccion_aux+codigo_loss_compuesta
+    elif composed_measure == "loss" and skynnet_config['Type'] == 'BINARYCLASS' :
+        codigo_medidas_extra = prediccion_aux+codigo_loss_compuesta
+    elif composed_measure == "loss" and skynnet_config['Type'] == 'REGRESSION' :
+        codigo_medidas_extra = prediccion_aux+codigo_loss_compuesta_regresion
+    else:
+        codigo_medidas_extra = codigo_medidas_extra
+    codigo_medidas_extra = fix_missing_locations(parse(codigo_medidas_extra))
     #funcion
     func_pred_def = FunctionDef(
         name=f'skynnet_prediction_global_{block_number}',
         args=arguments(args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
-        body=[for_pred_loop,comment_sync,codigo_prediccion_compuesta],
+        body=[for_pred_loop,comment_sync,codigo_medidas_extra],
         decorator_list=[],
         returns=None,
     )
@@ -879,7 +981,7 @@ def main():
             fo.write(post_sk_codes[block_number])
             fo.write("\n\n")
             #Escribo la llamada a los modelos del bloque
-            write_sk_block_invocation_code(block_number,fo)
+            write_sk_block_invocation_code(block_number,fo,skynnet_configs[block_number])
         fo.write("\n\n")
         #Escribo la llamada a todos los bloques
         write_sk_global_code(num_sk_blocks,fo)

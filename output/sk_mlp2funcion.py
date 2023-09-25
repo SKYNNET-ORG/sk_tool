@@ -1,11 +1,18 @@
 import tensorflow as tf, numpy as np
 import matplotlib.pyplot as plt
+import time
+
 # Load MNIST data using built-in datasets download function
 mnist = tf.keras.datasets.mnist
-(x_train, y_train), (x_test, y_test) = mnist.load_data()
+x_train = mnist.load_data()[0][0]
+y_train = mnist.load_data()[0][1]
+x_test = mnist.load_data()[1][0]
+y_test = mnist.load_data()[1][1]
 
 #Noramalize the pixel values by deviding each pixel by 255
-x_train, x_test = x_train / 255.0, x_test / 255.0
+x_train = x_train / 255.0
+x_test =  x_test / 255.0
+
 
 #SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
 
@@ -77,24 +84,35 @@ def skynnet_block_0(sk_i):
     _NEURON_2 = 40
     _NEURON_3 = 7
     _EPOCHS = 7
-    grupos_de_categorias = dividir_array_categorias(_DATA_TRAIN_Y, 10, 3)
-    _DATA_TRAIN_X = _DATA_TRAIN_X[np.isin(_DATA_TRAIN_Y, combinar_arrays(grupos_de_categorias)[sk_i])]
-    _DATA_TRAIN_Y = _DATA_TRAIN_Y[np.isin(_DATA_TRAIN_Y, combinar_arrays(grupos_de_categorias)[sk_i])]
-    print(len(_DATA_TRAIN_X), len(_DATA_TRAIN_Y))
-    print(np.unique(_DATA_TRAIN_Y))
-    categorias_incluir = np.unique(_DATA_TRAIN_Y)
-    etiquetas_consecutivas = np.arange(len(categorias_incluir))
-    _DATA_TRAIN_Y = np.searchsorted(categorias_incluir, _DATA_TRAIN_Y)
-    _NEURON_3 = len(np.unique(_DATA_TRAIN_Y))
-    inputs = tf.keras.Input(shape=(28, 28))
-    x = tf.keras.layers.Flatten()(inputs)
-    x = tf.keras.layers.Dense(_NEURON_1, activation='relu')(x)
-    x = tf.keras.layers.Dense(_NEURON_2, activation='relu')(x)
-    outputs = tf.keras.layers.Dense(_NEURON_3, activation='softmax')(x)
-    model[sk_i] = tf.keras.Model(inputs=inputs, outputs=outputs)
+
+    def crear():
+        grupos_de_categorias = dividir_array_categorias(_DATA_TRAIN_Y, 10, 3)
+        combinacion_arrays = combinar_arrays(grupos_de_categorias)[sk_i]
+        _DATA_TRAIN_X = _DATA_TRAIN_X[np.isin(_DATA_TRAIN_Y, combinacion_arrays)]
+        _DATA_TRAIN_Y = _DATA_TRAIN_Y[np.isin(_DATA_TRAIN_Y, combinacion_arrays)]
+        print('======================================')
+        print('Skynnet Info: Longitud de los datos de la subred (datos,etiquetas):', len(_DATA_TRAIN_X), len(_DATA_TRAIN_Y))
+        print('Skynnet Info: Categorias de esta subred', np.unique(_DATA_TRAIN_Y))
+        print('======================================')
+        categorias_incluir = np.unique(_DATA_TRAIN_Y)
+        etiquetas_consecutivas = np.arange(len(categorias_incluir))
+        _DATA_TRAIN_Y = np.searchsorted(categorias_incluir, _DATA_TRAIN_Y)
+        _NEURON_3 = len(np.unique(_DATA_TRAIN_Y))
+        inputs = tf.keras.Input(shape=(28, 28))
+        x = tf.keras.layers.Flatten()(inputs)
+        for i in range(3):
+            x = tf.keras.layers.Dense(_NEURON_1, activation='relu')(x)
+        x = tf.keras.layers.Dense(_NEURON_2, activation='relu')(x)
+        outputs = tf.keras.layers.Dense(_NEURON_3, activation='softmax')(x)
+        model[sk_i] = tf.keras.Model(inputs=inputs, outputs=outputs)
+        return model[sk_i]
+    model[sk_i] = crear()
     print(model[sk_i].summary())
+    start = time.time()
     model[sk_i].compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
     model[sk_i].fit(_DATA_TRAIN_X, _DATA_TRAIN_Y, validation_split=0.3, epochs=_EPOCHS)
+    end = time.time()
+    print(' tiempo de training transcurrido (segundos) =', end - start)
 #__CLOUDBOOK:PARALLEL__
 def skynnet_prediction_block_0(sk_i):
     global predictions_0_0
@@ -110,7 +128,7 @@ def skynnet_prediction_block_0(sk_i):
     grupos_de_categorias = dividir_array_categorias(_DATA_TEST_Y, 10, 3)
     categorias_incluir = combinar_arrays(grupos_de_categorias)[sk_i]
     label += f'{categorias_incluir}'
-    prediction = model[sk_i].predict(_DATA_TEST_X, verbose=0)
+    prediction = model[sk_i].predict(_DATA_TEST_X, verbose=1)
     categorias_str = label[label.find('[') + 1:label.find(']')]
     categorias = np.fromstring(categorias_str, dtype=int, sep=' ')
     resul = []
@@ -118,12 +136,12 @@ def skynnet_prediction_block_0(sk_i):
         array_final = np.ones(10)
         array_final[categorias] = pred
         resul.append(array_final)
+    #MSSE measure to get
     predictions_0_0[label] = resul
 
 
 #SKYNNET:END
 
-print("End of program")
 
 #__CLOUDBOOK:DU0__
 def skynnet_global_0():
@@ -145,7 +163,14 @@ def skynnet_prediction_global_0():
             correctas += 1
         total += 1
     precision_compuesta.append(correctas / total)
-    print('La prediccion compuesta es: ', precision_compuesta)
+    print('============================================')
+    print('Skynnet Info: La accuracy de la prediccion compuesta es: ', precision_compuesta)
+    print('============================================')
+    scce = tf.keras.losses.SparseCategoricalCrossentropy()
+    scce_orig = scce(y_test, resultado).numpy()
+    print('============================================')
+    print('Skynnet Info: La loss compuesta es: ', scce_orig)
+    print('============================================')
 
 
 #__CLOUDBOOK:MAIN__

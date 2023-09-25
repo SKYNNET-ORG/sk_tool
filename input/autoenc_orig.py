@@ -17,8 +17,10 @@ x_test = x_test.reshape((len(x_test),np.prod(x_test.shape[1:])))
 #output shape
 x_train_out = x_train_out.reshape((len(x_train_out),np.prod(x_train_out.shape[1:])))
 x_test_out = x_test_out.reshape((len(x_test_out),np.prod(x_test_out.shape[1:])))
+y_test = x_test_out
+y_train = x_train_out
 
-#SKYNNET:BEGIN_REGRESSION_ACC_LOSS
+#SKYNNET:BEGIN_REGRESSION_LOSS
 ratio=1
 data_dim_input=784
 bottleneck=32
@@ -30,19 +32,19 @@ _DATA_VAL_X = x_test
 _DATA_VAL_Y = x_test_out
 _DATA_TEST_X = x_test
 _DATA_TEST_Y = x_test_out
-_NEURON_1 = 8
-_NEURON_2 = 784
+_NEURON_2 = 32
 _EPOCHS = 10
 
 # Placeholder for input
 input_image = tf.keras.layers.Input(shape=(data_dim_input,))
-encoded_input = tf.keras.layers.Dense(bottleneck, activation='relu')(input_image)
+encoded_input = tf.keras.layers.Dense(_NEURON_2, activation='relu')(input_image)
 decoded_output = tf.keras.layers.Dense(data_dim_output, activation='sigmoid')(encoded_input)
 
 # Autoencoder model to map an input to its output
 autoencoder = tf.keras.models.Model(input_image, decoded_output)
 
 autoencoder.compile(optimizer = 'adam', loss = 'binary_crossentropy')
+print(autoencoder.summary())
 
 # VAMOS A ENTRENAR !!
 start=time.time()
