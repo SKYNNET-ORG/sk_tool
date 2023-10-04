@@ -24,7 +24,7 @@ y_train = x_train_out
 ratio=1
 data_dim_input=784
 bottleneck=32
-data_dim_output=data_dim_input
+data_dim_output=data_dim_input/4
 
 _DATA_TRAIN_X = x_train
 _DATA_TRAIN_Y = x_train_out
@@ -33,12 +33,13 @@ _DATA_VAL_Y = x_test_out
 _DATA_TEST_X = x_test
 _DATA_TEST_Y = x_test_out
 _NEURON_2 = 32
-_EPOCHS = 10
+_NEURON_3 = 784
+_EPOCHS = 30
 
 # Placeholder for input
 input_image = tf.keras.layers.Input(shape=(data_dim_input,))
 encoded_input = tf.keras.layers.Dense(_NEURON_2, activation='relu')(input_image)
-decoded_output = tf.keras.layers.Dense(data_dim_output, activation='sigmoid')(encoded_input)
+decoded_output = tf.keras.layers.Dense(_NEURON_3, activation='sigmoid')(encoded_input)
 
 # Autoencoder model to map an input to its output
 autoencoder = tf.keras.models.Model(input_image, decoded_output)

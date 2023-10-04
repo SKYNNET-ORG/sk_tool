@@ -306,7 +306,9 @@ else:
 {last_neuron[0]} = 2
         '''
     elif tipo_red == 'REGRESSION':
-        division_datos = f'''#Is not neccesary to divide data'''
+        division_datos = f'''#Is not neccesary to divide data
+{tipo_datos}_splits = np.array_split({datos_y},{grupos},axis=1)
+{datos_y} = {tipo_datos}_splits[sk_i]'''
     return fix_missing_locations(parse(division_datos))
 
 def division_datos_predict(tipo_datos,categorias,grupos,last_neuron,tipo_red,model_name,medida_compuesta):
@@ -885,9 +887,12 @@ print('============================================')
 print('Skynnet Info: La loss compuesta es: ', scce_orig)
 print('============================================')
 '''
+    prediccion_loss_regresion = f'''
+resultado = np.concatenate(list(predictions_{block_number}_0.values()), axis=1)
+'''
     codigo_loss_compuesta_regresion = f'''
 bce = tf.keras.losses.BinaryCrossentropy()
-bce_orig=bce(y_test, resultado)
+bce_orig=bce(y_test, resultado).numpy()
 print('============================================')
 print('Skynnet Info: La loss compuesta es: ', bce_orig)
 print('============================================')
@@ -901,7 +906,7 @@ print('============================================')
     elif composed_measure == "loss" and skynnet_config['Type'] == 'BINARYCLASS' :
         codigo_medidas_extra = prediccion_aux+codigo_loss_compuesta
     elif composed_measure == "loss" and skynnet_config['Type'] == 'REGRESSION' :
-        codigo_medidas_extra = prediccion_aux+codigo_loss_compuesta_regresion
+        codigo_medidas_extra = prediccion_loss_regresion+codigo_loss_compuesta_regresion
     else:
         codigo_medidas_extra = codigo_medidas_extra
     codigo_medidas_extra = fix_missing_locations(parse(codigo_medidas_extra))
