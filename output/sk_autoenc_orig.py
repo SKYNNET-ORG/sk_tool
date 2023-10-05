@@ -92,17 +92,21 @@ def skynnet_block_0(sk_i):
     _DATA_VAL_Y = x_test_out
     _DATA_TEST_X = x_test
     _DATA_TEST_Y = x_test_out
-    _NEURON_2 = 8
-    _NEURON_3 = 196
-    _EPOCHS = 8
+    bottleneck = 32
+    _NEURON_3 = 157
+    _EPOCHS = 6
     #Is not neccesary to divide data
-    train_splits = np.array_split(_DATA_TRAIN_Y, 4, axis=1)
+    train_splits = np.array_split(_DATA_TRAIN_Y, 5, axis=1)
     _DATA_TRAIN_Y = train_splits[sk_i]
+    #El tam de la ultima dimension
+    _NEURON_3 = _DATA_TRAIN_Y.shape[-1]
     #Is not neccesary to divide data
-    validate_splits = np.array_split(_DATA_VAL_Y, 4, axis=1)
+    validate_splits = np.array_split(_DATA_VAL_Y, 5, axis=1)
     _DATA_VAL_Y = validate_splits[sk_i]
+    #El tam de la ultima dimension
+    _NEURON_3 = _DATA_VAL_Y.shape[-1]
     input_image = tf.keras.layers.Input(shape=(data_dim_input,))
-    encoded_input = tf.keras.layers.Dense(_NEURON_2, activation='relu')(input_image)
+    encoded_input = tf.keras.layers.Dense(bottleneck, activation='relu')(input_image)
     decoded_output = tf.keras.layers.Dense(_NEURON_3, activation='sigmoid')(encoded_input)
     autoencoder[sk_i] = tf.keras.models.Model(input_image, decoded_output)
     autoencoder[sk_i].compile(optimizer='adam', loss='binary_crossentropy')
@@ -132,12 +136,12 @@ def skynnet_prediction_block_0(sk_i):
 
 #__CLOUDBOOK:DU0__
 def skynnet_global_0():
-    for i in range(4):
+    for i in range(5):
         skynnet_block_0(i)
     #__CLOUDBOOK:SYNC__
 #__CLOUDBOOK:DU0__
 def skynnet_prediction_global_0():
-    for i in range(4):
+    for i in range(5):
         skynnet_prediction_block_0(i)
     #__CLOUDBOOK:SYNC__
     resultado = np.concatenate(list(predictions_0_0.values()), axis=1)

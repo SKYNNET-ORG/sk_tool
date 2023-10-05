@@ -308,7 +308,8 @@ else:
     elif tipo_red == 'REGRESSION':
         division_datos = f'''#Is not neccesary to divide data
 {tipo_datos}_splits = np.array_split({datos_y},{grupos},axis=1)
-{datos_y} = {tipo_datos}_splits[sk_i]'''
+{datos_y} = {tipo_datos}_splits[sk_i]
+{last_neuron[0]} = {datos_y}.shape[-1]#El tam de la ultima dimension'''
     return fix_missing_locations(parse(division_datos))
 
 def division_datos_predict(tipo_datos,categorias,grupos,last_neuron,tipo_red,model_name,medida_compuesta):

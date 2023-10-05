@@ -32,13 +32,13 @@ _DATA_VAL_X = x_test
 _DATA_VAL_Y = x_test_out
 _DATA_TEST_X = x_test
 _DATA_TEST_Y = x_test_out
-_NEURON_2 = 32
+bottleneck = 32
 _NEURON_3 = 784
 _EPOCHS = 30
 
 # Placeholder for input
 input_image = tf.keras.layers.Input(shape=(data_dim_input,))
-encoded_input = tf.keras.layers.Dense(_NEURON_2, activation='relu')(input_image)
+encoded_input = tf.keras.layers.Dense(bottleneck, activation='relu')(input_image)
 decoded_output = tf.keras.layers.Dense(_NEURON_3, activation='sigmoid')(encoded_input)
 
 # Autoencoder model to map an input to its output
