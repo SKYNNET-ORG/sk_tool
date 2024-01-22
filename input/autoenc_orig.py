@@ -59,5 +59,26 @@ print (" tiempo de training transcurrido (segundos) =", (end-start))
 
 
 reconstructed_img = autoencoder.predict(_DATA_TEST_X)
+n = 20
+plt.figure(figsize=(20, 4))
+for i in range(n):
+    # display original
+    ax = plt.subplot(2, n, i + 1)
+    plt.imshow(_DATA_TEST_X[i].reshape(28,28))
+    plt.gray()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+    
+    # display reconstruction
+    ax = plt.subplot(2, n, i + 1 + n)
+    plt.imshow(reconstructed_img[i].reshape(28, 28))
+    
+    plt.gray()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+
+plt.show()
+print("Todo terminado")
+print("Adios")
 
 #SKYNNET:END

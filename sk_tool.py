@@ -10,7 +10,12 @@ sk_vars_list = ["_EMBEDDING_","_NEURON_","_CELL_","_EPOCHS","_FILTERS_"]
 sk_functions_list = ['summary','compile','fit','predict',]
 sk_creation_model_list = ['Sequential','Model']
 
+debug_option = 1
 num_subredes = 0
+
+def debug(msj):
+    if debug_option==1:
+        print("DEBUG: ",msj)
 
 funciones_combinatorias='''
 #__CLOUDBOOK:LOCAL__
@@ -186,25 +191,94 @@ class getInputModel(ast.NodeVisitor):
 
 class RemovePredictionNode(ast.NodeTransformer):
     '''Elimino la asignacion predicted = model.predict(x), solo las que tengan esa
-    forma especifica'''
+    forma especifica, si no la tiene, se puede asumir que no la va a usar? asegurar que la haga de esta forma'''
 
     def __init__(self,dict_modelos):
         self.dict_modelos = dict_modelos
+        self.predict_nombre = ""
+        self.removed =  False
+        self.lista_nodos_post_predict = []
+    
+    def visit(self, node):
+        if isinstance(node, ast.Assign):
+            nodo_valido_izqda = len(node.targets) == 1 and isinstance(node.targets[0], ast.Name)
+            nodo_valido_dcha = isinstance(node.value, ast.Call)
 
-    def visit_Assign(self, node):
-        nodo_valido_izqda = len(node.targets) == 1 and isinstance(node.targets[0], ast.Name)
-        nodo_valido_dcha = isinstance(node.value, ast.Call)
-        if nodo_valido_izqda and nodo_valido_dcha:
-            derecha = node.value
-            if isinstance(derecha.func, ast.Attribute) and derecha.func.attr == 'predict':
-                if isinstance(derecha.func.value, ast.Name) and derecha.func.value.id in self.dict_modelos.keys():
+            if nodo_valido_izqda and nodo_valido_dcha:
+                derecha = node.value
+                if (
+                    isinstance(derecha.func, ast.Attribute)
+                    and derecha.func.attr == 'predict'
+                    and isinstance(derecha.func.value, ast.Name)
+                    and derecha.func.value.id in self.dict_modelos.keys()
+                ):
+                    self.predict_nombre = unparse(node.targets[0])
+                    self.removed = True
+                    return None
+                elif self.removed:
+                    self.lista_nodos_post_predict.append(node)
                     return None
                 else:
                     return node
+            elif self.removed:
+                self.lista_nodos_post_predict.append(node)
+                return None
             else:
                 return node
+        elif self.removed:
+            self.lista_nodos_post_predict.append(node)
+            return None
+
+        self.generic_visit(node)
+        return node
+
+    def bien_visit(self,node):
+        if isinstance(node,Assign):
+            #print(dump(node))
+            nodo_valido_izqda = len(node.targets) == 1 and isinstance(node.targets[0], ast.Name)
+            nodo_valido_dcha = isinstance(node.value, ast.Call)
+            if nodo_valido_izqda and nodo_valido_dcha:
+                derecha = node.value
+                if isinstance(derecha.func, ast.Attribute) and derecha.func.attr == 'predict':
+                    if isinstance(derecha.func.value, ast.Name) and derecha.func.value.id in self.dict_modelos.keys():
+                        print("encontrado")
+                        #Para partir el arbol en dos y llevarme todo lo de despues del predict, me interesa 
+                        #el node.lineno y el nombre de la variable node.targets[0]
+                        self.linea_nombre = (node.lineno, unparse(node.targets[0]))
+                        self.removed = True
+                        return None
+                    else:
+                        if self.removed:
+                            print("1")
+                            self.lista_nodos.append(node)
+                            return None
+                        else:
+                            return node
+
+                else:
+                    #return node
+                    if self.removed:
+                        print("2")
+                        self.lista_nodos.append(node)
+                        return None
+                    else:
+                        return node
+            else:
+                #return node
+                if self.removed:
+                    print("3")
+                    self.lista_nodos.append(node)
+                    return None
+                else:
+                    return node
         else:
-            return node
+            if self.removed:
+                print("OJO")
+                self.lista_nodos.append(node)
+                return None
+        self.generic_visit(node)
+        return node
+
 
 class ModelArrayTransform(ast.NodeTransformer):
     '''Esta clase es para cambiar los modelos por arrays de modelos, 
@@ -223,7 +297,9 @@ class ModelArrayTransform(ast.NodeTransformer):
 
 class VisitLastNeuron(ast.NodeVisitor):
     '''Esta clase es para obtener el numero de categorias en las que se clasifica
-    TODO: Mezclar esta clase con la que reduce los datos'''
+    Si la asignacion es valida ("variable=valor")
+    Obtiene sus parametros (el nombre y el numero, para poder elegir la mas alta "_NEURON_3")
+    La variable last_neuron contiene el nombre y el numero de categorias'''
     max_valor = 0
     n_categorias = 0
     last_neuron = ()
@@ -263,6 +339,42 @@ class GetModelDataVars(ast.NodeVisitor):
             self.dict_modelos[self.model_name]["data_val"].append(node)
         if len(node.targets)==1 and node.targets[0].id in self.data_vars_test:
             self.dict_modelos[self.model_name]["data_test"].append(node)
+
+####Division del arbol de sintaxis en dos para conservar el codigo post-uso de la red
+
+def dividir_arbol_en_dos(arbol, linea_predict):
+    # Dividir el árbol en dos partes
+    arbol_anterior = ast.Module(body=arbol.body[:linea_predict])
+    arbol_posterior = ast.Module(body=arbol.body[linea_predict:])
+
+    return arbol_anterior, arbol_posterior
+
+def encontrar_linea_predict(arbol):
+    # Función auxiliar para encontrar la línea de la llamada a predict
+    def encontrar_predict(node):
+        return isinstance(node, ast.Assign) and \
+               len(node.targets) == 1 and \
+               isinstance(node.targets[0], ast.Name) and \
+               isinstance(node.value, ast.Call) and \
+               es_llamada_predict(node.value)
+
+    def es_llamada_predict(call_node):
+        print(unparse(dump(call_node)))
+        return isinstance(call_node.func, ast.Attribute) and \
+               isinstance(call_node.func.value, ast.Name) and \
+               isinstance(call_node.func.attr, str) and \
+               call_node.func.attr.lower() == 'predict'
+
+    # Recorrer el árbol para encontrar la línea de la llamada a predict
+    for i, nodo in enumerate(ast.walk(arbol)):
+        if es_llamada_predict(nodo):
+            return i + 1  # Devolver la línea de la llamada a predict
+
+    # Devolver -1 si no se encuentra la llamada a predict
+    return -1
+
+####
+
 
 def division_datos_fit(tipo_datos,categorias,grupos,last_neuron,tipo_red):
     if tipo_datos == "train":
@@ -524,6 +636,16 @@ def prepare_sk_file(file):
     return(sk_trees,init_code,post_sk_codes,skynnet_configs)
 
 def get_combinacion(a, n):
+    """
+    Obtiene las combinaciones de pares (r, c) donde c es la combinación de n elementos tomados de a en a.
+    
+    Parameters:
+    a (int): Número total de elementos.
+    n (int): Número de elementos a tomar en cada combinación.
+    
+    Returns:
+    list: Lista de pares (r, c).
+    """
     pairs = []
     r = 2
     c = comb(n, r)
@@ -535,6 +657,16 @@ def get_combinacion(a, n):
     return pairs
 
 def get_categorias(subredes, categorias):
+    """
+    Obtiene el número máximo de subredes y las categorías correspondientes.
+
+    Parameters:
+    subredes (int): Número de subredes.
+    categorias (int): Número de categorías.
+
+    Returns:
+    tuple: Número deseado de subredes y categorías correspondientes.
+    """
     results = {}
     for subred in range(subredes,1,-1):
         pairs = get_combinacion(subred,categorias)
@@ -558,23 +690,25 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
     5- Se crean las etiquetas de cloudbook necesarias para escribir la funcion skynnet
     Extra: Se añade el model number, porque puede haber varios modelos en un script'''
 
-    #Primero calculan categorias y se reducen las variables por n y se escriben
+    #Para tratar el codigo con ast se parsea primero
     ast_code = ast.parse(code)
-    #Lo primerisimo es saber las categorias 
-    reduccion = num_subredes
+
+    #Paso 0-Se separa el post-codigo despues del predict, es decir, el uso de la red
+    '''linea_predict = encontrar_linea_predict(ast_code)
+    if linea_predict!=-1:
+        ast_code,post_predict_code = dividir_arbol_en_dos(ast_code,linea_predict)
+    else:
+        post_predict_code = None 
+    print(linea_predict)
+    '''
+    #Paso 1 - Se consultan las categorias mirando la ultima capa de tipo _NEURON_
+    reduccion = num_subredes # capas=capas/reduccion  datos= datos/reduccion
     visit_categorias = VisitLastNeuron()
     visit_categorias.visit(ast_code)
     last_neuron = visit_categorias.last_neuron
     #print(last_neuron)
     if skynnet_config['Type'] == 'MULTICLASS':
-        #categorias: las categorias totales, las de la ultima capa _NEURON
-        #estas categorias se distribuyen en las subredes dividiendose en grupos tomados de dos en dos
-        #grupos: grupos en los que divido las categorias
-        #tomados: 2, porque por defecto se toman de 2 en 2
-        #categorias_subred: la media de categorias que le tocan a una subred (las categorias se meten en grupos, y a cada subred le tocan dos grupos)
-        #visit_categorias = VisitLastNeuron()
-        #visit_categorias.visit(ast_code)
-        categorias = visit_categorias.n_categorias
+        categorias = visit_categorias.n_categorias #Esto es igual que last_neuron[1]
         print(f"Son {categorias} categorias originales")
         #Se calcula cuantas subredes quedaran
         num_subredes,combinatorio = get_categorias(num_subredes, categorias)
@@ -597,33 +731,39 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         categorias = last_neuron[1]
         grupos = num_subredes
         reduccion = num_subredes
-    #Se reducen los datos
+    
+    #Paso 2 - Reduccion de datos, se reducen las variables de datos indicadas
     node_data_vars_reduced = TransformAssignSkVars(reduccion).visit(ast_code)
-    #==========================================
-    #Luego se escribe el resto retocando las invocaciones
-    #visito asignaciones
+    
+    #Paso 3 - Se guardan en un diccionario los modelos y sus funciones
     model_functions = VisitModelFunctions()
     model_functions.visit(node_data_vars_reduced)
     sk_dict = model_functions.dict_modelos
-
     #print(sk_dict)
     #sk_dict contiene todos los nodos de las funciones que busco
-    #============================================
+    
+    #Paso 4 - Se guarda en el diccionario de modelos, los datos de cada modelo
     #Una vez tengo el skdict, puedo guardar los datos de entrenamiento, test y validacion
     hay_prediccion = False #Variable para hacer la funcion predict o no, si no la hay poner un pass en la funcion
     for model_name in sk_dict.keys():
         hay_prediccion = 'predict' in sk_dict[model_name]
         GetModelDataVars(model_name,sk_dict).visit(node_data_vars_reduced)
+        #Ahora se busca el model.input, para saber en que punto insertar la division de datos, antes de que los metas en la red
         getInputModel(model_name,sk_dict).visit(node_data_vars_reduced) #aqui cojo el nodo antes de crear la red, para meter la division de datos y la ultima neurona antes
-        #if not(sk_dict[model_name]["input"]):
         if "input" not in sk_dict[model_name]:
             sk_dict[model_name]["input"] = sk_dict[model_name]["creation"] #Si no usas el modelo funcional TODO: Eliminar en el futuro
     #print(sk_dict)
-    #=========================================
-    #Quito la prediccion y la guardo para meterla en una funcion nueva
+    
+    #Paso 5 - Quito la prediccion del nodo de codigo que tengo hasta ahora
+    #Quito la prediccion y la guardo para meterla en una funcion nueva solo de la forma predicted = model.predict()
     predictions =  RemovePredictionNode(sk_dict)
     node_data_vars_reduced = predictions.visit(node_data_vars_reduced)
-    #=========================================
+    #Paso 5.5 - Divido el arbol en dos a partir de la linea TODO: Debe funcionar bien si estan vacios
+    prediction_nombre = predictions.predict_nombre
+    nodos_post_predict = predictions.lista_nodos_post_predict
+    
+    #Paso 6 - Variables globales predictions_bloque_modelo={}
+    #Cada predictions es un diccionario con la prediccion de cada subred
     #Escribo las variables globales, una por modelo que haya en el bloque
     number_of_models = len(sk_dict)
     global_predictions_declarations = []
@@ -638,8 +778,9 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
     fixed_predictions = map(lambda x: unparse(fix_missing_locations(x)), global_predictions_declarations)
     fout.writelines(fixed_predictions)
     #TODO Ver si merece la pena llamarlo como el nombre del modelo en lugar de un indice, por si hay varios ficheros con bloques SKYNNET
-    #=========================================
-    #Escribo las variables nonshared que son las de los modelos = None
+    
+    #Paso 7 - Variables nonshared modelo=[] y precision_compuesta=[]. El modelo permite una lista de modelos que cada vez se invoca con un indice
+    #en caso de que una maquina ejecute secuencialmente varios submodelos.
     nonshared_models_declarations = []
     nonshared_cloudbook_label = Expr(value = Comment(value='#__CLOUDBOOK:NONSHARED__'))
     nonshared_models_declarations.append(nonshared_cloudbook_label)
@@ -652,11 +793,12 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         nonshared_models_declarations.append(model_name_expression)
     fixed_nonshared = map(lambda x: unparse(fix_missing_locations(x)), nonshared_models_declarations)
     fout.writelines(fixed_nonshared)
-    #====================================== Añado la precision compuesta como una variable nonshared
+    #Añado la precision compuesta como una variable nonshared
     precision_compuesta= parse("precision_compuesta=[]")
     fout.write(unparse(fix_missing_locations(Expr(value = precision_compuesta))))
-    #=========================================
-    #Escribo la funcion skynnet block, que tiene todos los modelos del bloque
+    
+    #Paso 8: Funcion skynnet block que divide datos, crea y entrena modelos
+    #Se llama block por el bloque skynnet que gestiona, puede trabajar con varios modelos
     parallel_cloudbook_label = Expr(value=Comment(value='#__CLOUDBOOK:PARALLEL__'))
     fout.write(unparse(fix_missing_locations(parallel_cloudbook_label)))
     #Aqui cambiamos los model por model[i]
@@ -666,8 +808,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         name="skynnet_block_" + str(block_number),
         args=arguments(args=[ast.arg(arg='sk_i', annotation=None)], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
         body=[node_data_vars_reduced],
-        decorator_list=[]
-    )
+        decorator_list=[])
     for model_name in sk_dict.keys():
         global_node = Global(names=[model_name])
         func_node.body.insert(0,global_node)
@@ -675,9 +816,6 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         append_node = ast.parse(model_name+".append(None)")
         func_node.body.insert(1,append_node)
     fout.write("\n")#Para evitar que el func_node se escriba en la misma linea que el comentario
-    #Aqui cambiamos model por model[i]
-    '''for model_name in sk_dict.keys():
-        ModelArrayTransform(model_name).visit(func_node)'''
     #Meto antes del nodo de creacion del modelo, el codigo para calcular la division de los datos
     composed_measure = "" #Esta variable solo interesa en el predict, es para ver si calculo accuracy o loss o ambos
     if skynnet_config['Type'] == 'MULTICLASS':
@@ -687,11 +825,12 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
     elif skynnet_config['Type'] == 'REGRESSION':
         inserta_filtro_datos(func_node,"general",sk_dict,categorias,grupos,last_neuron,'REGRESSION', composed_measure)
     fout.write(unparse(fix_missing_locations(func_node)))
-    #=========================================
+    
+    #Paso 9 - Se escribe la funcion de la prediccion skynnet_prediction_block
+    #En principio se refiere a un bloque skynnet con n modelos
     if hay_prediccion: #si no la hay escribo la funcion con un pass
-        #Ahora hay que escribir la funcion de la prediccion, parallel y todo eso
         fout.write(unparse(fix_missing_locations(parallel_cloudbook_label)))
-        #cuerpo de la funcion: global predictions
+        #Declara como variables globales el diccionario de prediccion compuesta y la lista de modelos ya que los va a usar
         prediction_vars = []
         for model_number in range(number_of_models):
             prediction_vars.append(f"predictions_{block_number}_{model_number}")
@@ -701,9 +840,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         model_vars = []
         for model_name in sk_dict.keys():
             model_vars.append(Global(names=[model_name]))
-        #fix_missing_locations(global_prediction_vars)
-        #beginremove endremove
-        #beginremove_cloudbook_label=Expr(value=Comment(value='#__CLOUDBOOK:BEGINREMOVE__'))
+        #beginremove endremove: para que funcione la prediccion compuesta fuera de cloudbook
         beginremove_cloudbook_label=Comment(value='#__CLOUDBOOK:BEGINREMOVE__')
         cloudbook_var_prepare = ast.parse("__CLOUDBOOK__ = {}\n__CLOUDBOOK__['agent'] = {}")
         cloudbook_var = Subscript(
@@ -717,11 +854,11 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         )
         value = Str(s="agente_skynnet")
         cloudbook_var_assig = Assign(targets=[cloudbook_var], value=value)
-        #endremove_cloudbook_label=Expr(value=Comment(value='#__CLOUDBOOK:ENDREMOVE__'))
         endremove_cloudbook_label=Comment(value='#__CLOUDBOOK:ENDREMOVE__')
+        #Preparo las labels
+        #El diccionario de predicciones contiene labels, que son para identificar que maquina se encarga de que subred
         label_var = Name(id="label",ctx=Load())
-        #Para permitir varios modelos por agente tengo que añadir str(i) al label
-        #assignation_cb_dict = Assign(targets=[label_var], value=cloudbook_var)
+        #Para permitir varios modelos por agente tengo que añadir str(sk_i) al label
         value=ast.BinOp(
             left=cloudbook_var,     # Variable adios
             op=ast.Add(),                                  # Operador de suma
@@ -732,12 +869,11 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
             )
         )
         assignation_cb_dict = Assign(targets=[label_var], value=value)
+        #Asignacion de predicciones, es el final de la funcion, el predictions_x_y[label] = resul
         predictions_assignements = []
         for i,model_name in enumerate(sk_dict.keys()):
             nombre = prediction_vars[i]
-            #valor = sk_dict[model_name]['predict']
-            #valor = ModelArrayTransform(model_name).visit(sk_dict[model_name]['predict']) #Ahora cambia por array de modelos
-            valor = Name(id="resul", ctx=ast.Load())#ModelArrayTransform(model_name).visit(sk_dict[model_name]['predict']) #Ahora cambia por array de modelos
+            valor = Name(id="resul", ctx=ast.Load())
             prediction_var_target = Subscript(
                 value=Name(id=nombre,ctx=Load()),
                 slice=Index(value=label_var)
@@ -766,8 +902,10 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         if "ACC" not in measure_options and "LOSS" not in measure_options:
             composed_measure = ""
         #print(composed_measure)
+        predict_data = None
         for model_name in sk_dict.keys():
             to_insert_nodes = sk_dict[model_name]['data_test']
+            predict_data = to_insert_nodes
             pred_func_node.body.insert(2,to_insert_nodes)
         if skynnet_config['Type'] == 'MULTICLASS':
             inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos,last_neuron,'MULTICLASS', composed_measure)
@@ -779,9 +917,9 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
 
 
     fout.write('\n\n')
-    return num_subredes
+    return num_subredes,prediction_nombre,nodos_post_predict,predict_data
 
-def write_sk_block_invocation_code(block_number,fo, skynnet_config):
+def write_sk_block_invocation_code(block_number,fo, skynnet_config, nombre_predict, nodos_post_predict, predict_data):
     '''Escribe la funcion con el bucle, va en la du_0
     #DU_0
     def skynnet_global_n():
@@ -864,11 +1002,11 @@ def write_sk_block_invocation_code(block_number,fo, skynnet_config):
 '''
     codigo_prediccion_compuesta =f'''global precision_compuesta
 valores = np.array(list(predictions_{block_number}_0.values()))
-resultado = np.prod(valores,axis=0)
+{nombre_predict} = np.prod(valores,axis=0)
 correctas = 0
 total = 0
 for i in range(len(y_test)):
-    if y_test[i] == np.argmax(resultado[i]):
+    if y_test[i] == np.argmax({nombre_predict}[i]):
         correctas+=1
     total+=1
 precision_compuesta.append(correctas/total)
@@ -879,21 +1017,21 @@ print("============================================")
     prediccion_aux = f'''
 global precision_compuesta
 valores = np.array(list(predictions_{block_number}_0.values()))
-resultado = np.prod(valores,axis=0)
+{nombre_predict} = np.prod(valores,axis=0)
 '''
     codigo_loss_compuesta = f'''
 scce = tf.keras.losses.SparseCategoricalCrossentropy()
-scce_orig=scce(y_test, resultado).numpy()
+scce_orig=scce(y_test, {nombre_predict}).numpy()
 print('============================================')
 print('Skynnet Info: La loss compuesta es: ', scce_orig)
 print('============================================')
 '''
     prediccion_loss_regresion = f'''
-resultado = np.concatenate(list(predictions_{block_number}_0.values()), axis=1)
+{nombre_predict} = np.concatenate(list(predictions_{block_number}_0.values()), axis=1)
 '''
     codigo_loss_compuesta_regresion = f'''
 bce = tf.keras.losses.BinaryCrossentropy()
-bce_orig=bce(y_test, resultado).numpy()
+bce_orig=bce(y_test, {nombre_predict}).numpy()
 print('============================================')
 print('Skynnet Info: La loss compuesta es: ', bce_orig)
 print('============================================')
@@ -915,7 +1053,7 @@ print('============================================')
     func_pred_def = FunctionDef(
         name=f'skynnet_prediction_global_{block_number}',
         args=arguments(args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
-        body=[for_pred_loop,comment_sync,codigo_medidas_extra],
+        body=[predict_data,for_pred_loop,comment_sync,codigo_medidas_extra,nodos_post_predict],
         decorator_list=[],
         returns=None,
     )
@@ -982,12 +1120,12 @@ def main():
         fo.write(funciones_combinatorias)
         for block_number in range(num_sk_blocks):
             code = sk_trees[block_number]
-            num_subredes = process_skynnet_code(code, skynnet_configs[block_number], fo, n, block_number)
+            num_subredes,prediction_nombre,nodos_post_predict,predict_data = process_skynnet_code(code, skynnet_configs[block_number], fo, n, block_number)
             #escribo el final
             fo.write(post_sk_codes[block_number])
             fo.write("\n\n")
             #Escribo la llamada a los modelos del bloque
-            write_sk_block_invocation_code(block_number,fo,skynnet_configs[block_number])
+            write_sk_block_invocation_code(block_number,fo,skynnet_configs[block_number],prediction_nombre,nodos_post_predict,predict_data)
         fo.write("\n\n")
         #Escribo la llamada a todos los bloques
         write_sk_global_code(num_sk_blocks,fo)
