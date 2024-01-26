@@ -805,7 +805,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
     for model_name in sk_dict.keys():
         ModelArrayTransform(model_name).visit(node_data_vars_reduced)
     func_node = FunctionDef(
-        name="skynnet_block_" + str(block_number),
+        name="skynnet_train_" + str(block_number),
         args=arguments(args=[ast.arg(arg='sk_i', annotation=None)], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
         body=[node_data_vars_reduced],
         decorator_list=[])
@@ -884,7 +884,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
             predictions_assignements.append(prediction_assignment)
         #crear la funcion y meterle lo anterior en el body
         pred_func_node = FunctionDef(
-            name="skynnet_prediction_block_" + str(block_number),
+            name="skynnet_prediction_" + str(block_number),
             args=arguments(args=[ast.arg(arg='sk_i', annotation=None)], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
             body=[global_predictions_vars,model_vars,beginremove_cloudbook_label,cloudbook_var_prepare,cloudbook_var_assig, endremove_cloudbook_label,assignation_cb_dict, predictions_assignements],
             decorator_list=[]
@@ -922,7 +922,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
 def write_sk_block_invocation_code(block_number,fo, skynnet_config, nombre_predict, nodos_post_predict, predict_data):
     '''Escribe la funcion con el bucle, va en la du_0
     #DU_0
-    def skynnet_global_n():
+    def skynnet_train_global_n():
       for i in subredes:
         assign_unique_id(i) #y filtrar datos 
         #en la herramienta no hace nada
@@ -952,10 +952,10 @@ def write_sk_block_invocation_code(block_number,fo, skynnet_config, nombre_predi
         args=[Num(num_subredes)],
         keywords=[],
     )
-    #llamada a funcion skynnet_block_n
+    #llamada a funcion skynnet_train_n
     skynnet_call = Expr(
         value=Call(
-            func=Name(id='skynnet_block_'+str(block_number), ctx=Load()),
+            func=Name(id='skynnet_train_'+str(block_number), ctx=Load()),
             args=[ast.arg(arg='i', annotation=None)],
             keywords=[],
         )
@@ -971,7 +971,7 @@ def write_sk_block_invocation_code(block_number,fo, skynnet_config, nombre_predi
     comment_sync = Comment(value = "#__CLOUDBOOK:SYNC__")
     #funcion
     func_def = FunctionDef(
-        name=f'skynnet_global_{block_number}',
+        name=f'skynnet_train_global_{block_number}',
         args=arguments(args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
         body=[for_loop,comment_sync],
         decorator_list=[],
@@ -984,7 +984,7 @@ def write_sk_block_invocation_code(block_number,fo, skynnet_config, nombre_predi
     fo.write("\n")
     skynnet_pred_call = Expr(
         value=Call(
-            func=Name(id='skynnet_prediction_block_'+str(block_number), ctx=Load()),
+            func=Name(id='skynnet_prediction_'+str(block_number), ctx=Load()),
             args=[ast.arg(arg='i', annotation=None)],
             keywords=[],
         )
@@ -1064,12 +1064,12 @@ def write_sk_global_code(number_of_sk_functions,fo):
     '''escribo un if name al final del fichero que invoca a las funciones de cada modelo necesarias, solo invocaciones, las definciones en 
     la funcion sk_model_code. Esta invocacion debería ir en la du_0
     if name = main:
-        skynnet_global_0()
-        skynnet_global_n()
+        skynnet_train_global_0()
+        skynnet_train_global_n()
         predicted_1 = bla bla'''
     
-    # Creamos una lista de nombres de función con el patrón "skynnet_global_{i}"
-    func_names = [f"skynnet_global_{i}" for i in range(number_of_sk_functions)]
+    # Creamos una lista de nombres de función con el patrón "skynnet_train_global_{i}"
+    func_names = [f"skynnet_train_global_{i}" for i in range(number_of_sk_functions)]
     func_pred_names = [f"skynnet_prediction_global_{i}" for i in range(number_of_sk_functions)]
     # Creamos una lista de llamadas a función con los nombres generados y los índices del 0 a n
     func_calls = [Call(func=Name(id=name, ctx=ast.Load()), args=[], keywords=[]) for name in func_names]
