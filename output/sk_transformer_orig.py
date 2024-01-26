@@ -114,7 +114,7 @@ predictions_0_0 = {}
 model = []
 precision_compuesta = []
 #__CLOUDBOOK:PARALLEL__
-def skynnet_block_0(sk_i):
+def skynnet_train_0(sk_i):
     global model
     model.append(None)
     _DATA_TRAIN_X = x_train
@@ -174,7 +174,7 @@ def skynnet_block_0(sk_i):
     end = time.time()
     print(' original: tiempo transcurrido (segundos) =', end - start)
 #__CLOUDBOOK:PARALLEL__
-def skynnet_prediction_block_0(sk_i):
+def skynnet_prediction_0(sk_i):
     global predictions_0_0
     global model
     _DATA_TEST_X = x_train
@@ -198,16 +198,16 @@ def skynnet_prediction_block_0(sk_i):
 #SKYNNET:END
 
 #__CLOUDBOOK:DU0__
-def skynnet_global_0():
+def skynnet_train_global_0():
     for i in range(2):
-        skynnet_block_0(i)
+        skynnet_train_0(i)
     #__CLOUDBOOK:SYNC__
 #__CLOUDBOOK:DU0__
 def skynnet_prediction_global_0():
     _DATA_TEST_X = x_train
     _DATA_TEST_Y = y_train
     for i in range(2):
-        skynnet_prediction_block_0(i)
+        skynnet_prediction_0(i)
     #__CLOUDBOOK:SYNC__
     global precision_compuesta
     valores = np.array(list(predictions_0_0.values()))
@@ -221,7 +221,7 @@ def skynnet_prediction_global_0():
 
 #__CLOUDBOOK:MAIN__
 def main():
-    skynnet_global_0()
+    skynnet_train_global_0()
     skynnet_prediction_global_0()
 
 if __name__ == '__main__':
