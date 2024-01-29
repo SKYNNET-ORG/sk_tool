@@ -74,7 +74,7 @@ def combinar_arrays(arrays):
     return arrays_combinados
 
 #__CLOUDBOOK:GLOBAL__
-predictions_0_0 = {}
+predictions_0 = {}
 #__CLOUDBOOK:NONSHARED__
 autoencoder = []
 precision_compuesta = []
@@ -117,7 +117,7 @@ def skynnet_train_0(sk_i):
     print(' tiempo de training transcurrido (segundos) =', end - start)
 #__CLOUDBOOK:PARALLEL__
 def skynnet_prediction_0(sk_i):
-    global predictions_0_0
+    global predictions_0
     global autoencoder
     _DATA_TEST_X = x_test
     _DATA_TEST_Y = x_test_out
@@ -129,7 +129,7 @@ def skynnet_prediction_0(sk_i):
     label = __CLOUDBOOK__['agent']['id'] + str(sk_i)
     prediction = autoencoder[sk_i].predict(_DATA_TEST_X, verbose=1)
     resul = prediction
-    predictions_0_0[label] = resul
+    predictions_0[label] = resul
 
 
 #SKYNNET:END
@@ -146,7 +146,7 @@ def skynnet_prediction_global_0():
     for i in range(4):
         skynnet_prediction_0(i)
     #__CLOUDBOOK:SYNC__
-    reconstructed_img = np.concatenate(list(predictions_0_0.values()), axis=1)
+    reconstructed_img = np.concatenate(list(predictions_0.values()), axis=1)
     bce = tf.keras.losses.BinaryCrossentropy()
     bce_orig = bce(y_test, reconstructed_img).numpy()
     print('============================================')

@@ -68,7 +68,7 @@ def combinar_arrays(arrays):
     return arrays_combinados
 
 #__CLOUDBOOK:GLOBAL__
-predictions_0_0 = {}
+predictions_0 = {}
 #__CLOUDBOOK:NONSHARED__
 model = []
 precision_compuesta = []
@@ -110,7 +110,7 @@ def skynnet_train_0(sk_i):
     print(' tiempo de training transcurrido (segundos) =', end - start)
 #__CLOUDBOOK:PARALLEL__
 def skynnet_prediction_0(sk_i):
-    global predictions_0_0
+    global predictions_0
     global model
     _DATA_TEST_X = x_test
     _DATA_TEST_Y = y_test
@@ -132,7 +132,7 @@ def skynnet_prediction_0(sk_i):
         array_final[categorias] = pred
         resul.append(array_final)
     #MSSE measure to get
-    predictions_0_0[label] = resul
+    predictions_0[label] = resul
 
 
 #SKYNNET:END
@@ -151,7 +151,7 @@ def skynnet_prediction_global_0():
         skynnet_prediction_0(i)
     #__CLOUDBOOK:SYNC__
     global precision_compuesta
-    valores = np.array(list(predictions_0_0.values()))
+    valores = np.array(list(predictions_0.values()))
     predicted = np.prod(valores, axis=0)
     correctas = 0
     total = 0

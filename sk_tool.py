@@ -1,4 +1,5 @@
-from sk_extra_codes import *
+
+import sk_extra_codes
 from ast import *
 import sys
 import re
@@ -714,16 +715,21 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
     #Paso 6 - Variables globales predictions_bloque_modelo={}
     #Cada predictions es un diccionario con la prediccion de cada subred
     #Escribo las variables globales, una por modelo que haya en el bloque
-    number_of_models = len(sk_dict)
+    #number_of_models = len(sk_dict)
     global_predictions_declarations = []
     global_cloudbook_label = Expr(value=Comment(value='#__CLOUDBOOK:GLOBAL__'))
     global_predictions_declarations.append(global_cloudbook_label)
-    for model_number in range(number_of_models):
+    '''for model_number in range(number_of_models):
         global_pred_assignment = Assign(targets=[ast.Name(id=f"predictions_{block_number}_{model_number}", ctx=ast.Store())],  # El objetivo de la asignación es el nombre "predictions"
                                 value=ast.Dict(keys=[], values=[]),  # El valor asignado es un diccionario vacío {}
                                 )
         global_pred_expr = Expr(value=global_pred_assignment)
-        global_predictions_declarations.append(global_pred_expr)
+        global_predictions_declarations.append(global_pred_expr)'''
+    global_pred_assignment = Assign(targets=[ast.Name(id=f"predictions_{block_number}", ctx=ast.Store())],  # El objetivo de la asignación es el nombre "predictions"
+                            value=ast.Dict(keys=[], values=[]),  # El valor asignado es un diccionario vacío {}
+                            )
+    global_pred_expr = Expr(value=global_pred_assignment)
+    global_predictions_declarations.append(global_pred_expr)
     fixed_predictions = map(lambda x: unparse(fix_missing_locations(x)), global_predictions_declarations)
     fout.writelines(fixed_predictions)
     #TODO Ver si merece la pena llamarlo como el nombre del modelo en lugar de un indice, por si hay varios ficheros con bloques SKYNNET
@@ -781,8 +787,9 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         fout.write(unparse(fix_missing_locations(parallel_cloudbook_label)))
         #Declara como variables globales el diccionario de prediccion compuesta y la lista de modelos ya que los va a usar
         prediction_vars = []
-        for model_number in range(number_of_models):
-            prediction_vars.append(f"predictions_{block_number}_{model_number}")
+        '''for model_number in range(number_of_models):
+            prediction_vars.append(f"predictions_{block_number}_{model_number}")'''
+        prediction_vars.append(f"predictions_{block_number}")
         global_predictions_vars = []
         for prediction in prediction_vars:
             global_predictions_vars.append(Global(names=[prediction]))
@@ -950,7 +957,7 @@ def write_sk_block_invocation_code(block_number,fo, skynnet_config, nombre_predi
 #No measures in pragma, nothing to add
 '''
     codigo_prediccion_compuesta =f'''global precision_compuesta
-valores = np.array(list(predictions_{block_number}_0.values()))
+valores = np.array(list(predictions_{block_number}.values()))
 {nombre_predict} = np.prod(valores,axis=0)
 correctas = 0
 total = 0
@@ -965,7 +972,7 @@ print("============================================")
 '''
     prediccion_aux = f'''
 global precision_compuesta
-valores = np.array(list(predictions_{block_number}_0.values()))
+valores = np.array(list(predictions_{block_number}.values()))
 {nombre_predict} = np.prod(valores,axis=0)
 '''
     codigo_loss_compuesta = f'''
@@ -976,7 +983,7 @@ print('Skynnet Info: La loss compuesta es: ', scce_orig)
 print('============================================')
 '''
     prediccion_loss_regresion = f'''
-{nombre_predict} = np.concatenate(list(predictions_{block_number}_0.values()), axis=1)
+{nombre_predict} = np.concatenate(list(predictions_{block_number}.values()), axis=1)
 '''
     codigo_loss_compuesta_regresion = f'''
 bce = tf.keras.losses.BinaryCrossentropy()
@@ -1066,7 +1073,7 @@ def main():
     with open(sk_file,'w') as fo:
         #escribo el principio
         fo.write(init_code)
-        fo.write(funciones_combinatorias)
+        fo.write(sk_extra_codes.funciones_combinatorias)
         for block_number in range(num_sk_blocks):
             code = sk_trees[block_number]
             num_subredes,prediction_nombre,nodos_post_predict,predict_data = process_skynnet_code(code, skynnet_configs[block_number], fo, n, block_number)
