@@ -125,7 +125,6 @@ class VisitModelFunctions(ast.NodeVisitor):
 
 class getInputModel(ast.NodeVisitor):
     '''meto en el dict, el input del diccionario'''
-    #def __init__(self,model_name,dict_modelos):
     def __init__(self,dict_modelo):
         self.dict_modelo = dict_modelo
         #self.model_name = model_name
@@ -138,10 +137,6 @@ class getInputModel(ast.NodeVisitor):
                 self.dict_modelo["input"] = node
         
         self.generic_visit(node)
-
-    '''def visit_Call(self,node):
-        if isinstance(node.func, ast.Attribute) and node.func.attr =="Input":
-            self.dict_modelos[self.model_name]["input"] = node'''
 
 class RemovePredictionNode(ast.NodeTransformer):
     '''Elimino la asignacion predicted = model.predict(x), solo las que tengan esa
@@ -185,54 +180,6 @@ class RemovePredictionNode(ast.NodeTransformer):
 
         self.generic_visit(node)
         return node
-
-    def bien_visit(self,node):
-        if isinstance(node,Assign):
-            #print(dump(node))
-            nodo_valido_izqda = len(node.targets) == 1 and isinstance(node.targets[0], ast.Name)
-            nodo_valido_dcha = isinstance(node.value, ast.Call)
-            if nodo_valido_izqda and nodo_valido_dcha:
-                derecha = node.value
-                if isinstance(derecha.func, ast.Attribute) and derecha.func.attr == 'predict':
-                    if isinstance(derecha.func.value, ast.Name) and derecha.func.value.id in self.dict_modelos.keys():
-                        print("encontrado")
-                        #Para partir el arbol en dos y llevarme todo lo de despues del predict, me interesa 
-                        #el node.lineno y el nombre de la variable node.targets[0]
-                        self.linea_nombre = (node.lineno, unparse(node.targets[0]))
-                        self.removed = True
-                        return None
-                    else:
-                        if self.removed:
-                            print("1")
-                            self.lista_nodos.append(node)
-                            return None
-                        else:
-                            return node
-
-                else:
-                    #return node
-                    if self.removed:
-                        print("2")
-                        self.lista_nodos.append(node)
-                        return None
-                    else:
-                        return node
-            else:
-                #return node
-                if self.removed:
-                    print("3")
-                    self.lista_nodos.append(node)
-                    return None
-                else:
-                    return node
-        else:
-            if self.removed:
-                print("OJO")
-                self.lista_nodos.append(node)
-                return None
-        self.generic_visit(node)
-        return node
-
 
 class ModelArrayTransform(ast.NodeTransformer):
     '''Esta clase es para cambiar los modelos por arrays de modelos, 
@@ -281,10 +228,6 @@ class GetModelDataVars(ast.NodeVisitor):
     #def __init__(self,model_name, dict_modelo):
     def __init__(self, dict_modelo):
         self.dict_modelo = dict_modelo
-        #self.model_name = model_name
-        '''self.dict_modelos[self.model_name]["data_train"] = []
-        self.dict_modelos[self.model_name]["data_val"] = []
-        self.dict_modelos[self.model_name]["data_test"] = []'''
         self.dict_modelo["data_train"] = []
         self.dict_modelo["data_val"] = []
         self.dict_modelo["data_test"] = []
@@ -292,50 +235,11 @@ class GetModelDataVars(ast.NodeVisitor):
     def visit_Assign(self,node):
 
         if len(node.targets)==1 and node.targets[0].id in self.data_vars_train:
-            #self.dict_modelos[self.model_name]["data_train"].append(node)
             self.dict_modelo["data_train"].append(node)
         if len(node.targets)==1 and node.targets[0].id in self.data_vars_val:
-            #self.dict_modelos[self.model_name]["data_val"].append(node)
             self.dict_modelo["data_val"].append(node)
         if len(node.targets)==1 and node.targets[0].id in self.data_vars_test:
-            #self.dict_modelos[self.model_name]["data_test"].append(node)
             self.dict_modelo["data_test"].append(node)
-
-####Division del arbol de sintaxis en dos para conservar el codigo post-uso de la red
-
-def dividir_arbol_en_dos(arbol, linea_predict):
-    # Dividir el árbol en dos partes
-    arbol_anterior = ast.Module(body=arbol.body[:linea_predict])
-    arbol_posterior = ast.Module(body=arbol.body[linea_predict:])
-
-    return arbol_anterior, arbol_posterior
-
-def encontrar_linea_predict(arbol):
-    # Función auxiliar para encontrar la línea de la llamada a predict
-    def encontrar_predict(node):
-        return isinstance(node, ast.Assign) and \
-               len(node.targets) == 1 and \
-               isinstance(node.targets[0], ast.Name) and \
-               isinstance(node.value, ast.Call) and \
-               es_llamada_predict(node.value)
-
-    def es_llamada_predict(call_node):
-        print(unparse(dump(call_node)))
-        return isinstance(call_node.func, ast.Attribute) and \
-               isinstance(call_node.func.value, ast.Name) and \
-               isinstance(call_node.func.attr, str) and \
-               call_node.func.attr.lower() == 'predict'
-
-    # Recorrer el árbol para encontrar la línea de la llamada a predict
-    for i, nodo in enumerate(ast.walk(arbol)):
-        if es_llamada_predict(nodo):
-            return i + 1  # Devolver la línea de la llamada a predict
-
-    # Devolver -1 si no se encuentra la llamada a predict
-    return -1
-
-####
-
 
 def division_datos_fit(tipo_datos,categorias,grupos,last_neuron,tipo_red):
     if tipo_datos == "train":
@@ -471,8 +375,6 @@ for i,pred in enumerate(prediction):
 
 def inserta_nodo(sk_dict,model_name,to_insert_node,node_destiny,last_neuron):
     
-    #nodo_a_buscar = sk_dict[model_name]["creation"]
-    #nodo_a_buscar = sk_dict[model_name]["input"]
     nodo_a_buscar = sk_dict["creation"]
     nodo_a_buscar = sk_dict["input"]
     if isinstance(node_destiny, ast.AST):
@@ -497,30 +399,14 @@ def inserta_filtro_datos(nodo_destino,tipo_funcion,sk_dict,categorias,grupos,las
     nodo_destino: nodo tipo funcion en el que hay que insertar'''
     model_name = sk_dict['name']
     if tipo_funcion=="general":
-        #for model_name in sk_dict.keys():
-        #    if sk_dict[model_name]["data_train"] != []:
-        #        to_insert_node = division_datos_fit("train",categorias,grupos,last_neuron,tipo_red)
-        #        inserta_nodo(sk_dict,model_name,to_insert_node,nodo_destino,last_neuron)
-        #    if sk_dict[model_name]["data_val"] != []:
-        #        to_insert_node = division_datos_fit("validate",categorias,grupos,last_neuron,tipo_red)
-        #        inserta_nodo(sk_dict,model_name,to_insert_node,nodo_destino,last_neuron)
-        
         if sk_dict["data_train"] != []:
             to_insert_node = division_datos_fit("train",categorias,grupos,last_neuron,tipo_red)
             inserta_nodo(sk_dict,model_name,to_insert_node,nodo_destino,last_neuron)
         if sk_dict["data_val"] != []:
             to_insert_node = division_datos_fit("validate",categorias,grupos,last_neuron,tipo_red)
             inserta_nodo(sk_dict,model_name,to_insert_node,nodo_destino,last_neuron)
-
-    #elif tipo_funcion == "predict":
-    #    for model_name in sk_dict.keys():
-    #        if sk_dict[model_name]["data_test"] != []:
-    #            #to_insert_node = division_datos_fit("test",categorias,grupos,last_neuron,tipo_red)
-    #            to_insert_node = division_datos_predict("test",categorias,grupos,last_neuron,tipo_red,model_name, medida_compuesta)
-    #            nodo_destino.body.insert(8,to_insert_node) #En el predict es distinto, se exactamente donde insertar
     elif tipo_funcion == "predict":
         if sk_dict["data_test"] != []:
-            #to_insert_node = division_datos_fit("test",categorias,grupos,last_neuron,tipo_red)
             to_insert_node = division_datos_predict("test",categorias,grupos,last_neuron,tipo_red,model_name, medida_compuesta)
             nodo_destino.body.insert(8,to_insert_node) #En el predict es distinto, se exactamente donde insertar
     else:
@@ -716,20 +602,12 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
     model_functions = VisitModelFunctions()
     model_functions.visit(node_data_vars_reduced)
     sk_dict = model_functions.dict_modelo
-    print(f"Paso 3 ======> {sk_dict}")
+    #print(f"Paso 3 ======> {sk_dict}")
     #sk_dict contiene todos los nodos de las funciones que busco
     
     #Paso 4 - Se guarda en el diccionario de modelos, los datos de cada modelo
     #Una vez tengo el skdict, puedo guardar los datos de entrenamiento, test y validacion
     hay_prediccion = False #Variable para hacer la funcion predict o no, si no la hay poner un pass en la funcion
-    #for model_name in sk_dict.keys():
-    #    hay_prediccion = 'predict' in sk_dict[model_name]
-    #    GetModelDataVars(model_name,sk_dict).visit(node_data_vars_reduced)
-    #    #Ahora se busca el model.input, para saber en que punto insertar la division de datos, antes de que los metas en la red
-    #    getInputModel(model_name,sk_dict).visit(node_data_vars_reduced) #aqui cojo el nodo antes de crear la red, para meter la division de datos y la ultima neurona antes
-    #    if "input" not in sk_dict[model_name]:
-    #        sk_dict[model_name]["input"] = sk_dict[model_name]["creation"] #Si no usas el modelo funcional TODO: Eliminar en el futuro
-    #print(sk_dict)
     hay_prediccion = 'predict' in sk_dict
     GetModelDataVars(sk_dict).visit(node_data_vars_reduced)
     #Ahora se busca el model.input, para saber en que punto insertar la division de datos, antes de que los metas en la red
@@ -737,7 +615,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
     if "input" not in sk_dict:
         sk_dict["input"] = sk_dict["creation"] #Si no usas el modelo funcional TODO: Eliminar en el futuro
     #print(sk_dict)
-    print(f"Paso 4 ======> {sk_dict}")
+    #print(f"Paso 4 ======> {sk_dict}")
     
     #Paso 5 - Quito la prediccion del nodo de codigo que tengo hasta ahora
     #Quito la prediccion y la guardo para meterla en una funcion nueva solo de la forma predicted = model.predict()
@@ -754,12 +632,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
     global_predictions_declarations = []
     global_cloudbook_label = Expr(value=Comment(value='#__CLOUDBOOK:GLOBAL__'))
     global_predictions_declarations.append(global_cloudbook_label)
-    '''for model_number in range(number_of_models):
-        global_pred_assignment = Assign(targets=[ast.Name(id=f"predictions_{block_number}_{model_number}", ctx=ast.Store())],  # El objetivo de la asignación es el nombre "predictions"
-                                value=ast.Dict(keys=[], values=[]),  # El valor asignado es un diccionario vacío {}
-                                )
-        global_pred_expr = Expr(value=global_pred_assignment)
-        global_predictions_declarations.append(global_pred_expr)'''
+   
     global_pred_assignment = Assign(targets=[ast.Name(id=f"predictions_{block_number}", ctx=ast.Store())],  # El objetivo de la asignación es el nombre "predictions"
                             value=ast.Dict(keys=[], values=[]),  # El valor asignado es un diccionario vacío {}
                             )
@@ -774,14 +647,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
     nonshared_models_declarations = []
     nonshared_cloudbook_label = Expr(value = Comment(value='#__CLOUDBOOK:NONSHARED__'))
     nonshared_models_declarations.append(nonshared_cloudbook_label)
-    #for model_name in sk_dict.keys():
-    #    nombre = ast.Name(id=model_name, ctx=ast.Store())
-    #    #valor = ast.NameConstant(value=None) #Esto era cuando no teniamos array de modelos
-    #    valor = ast.List(elts=[], ctx=ast.Load())
-    #    model_name_declaration = ast.Assign(targets=[nombre], value=valor)
-    #    model_name_expression = ast.Expr(value = model_name_declaration) #Como expresion para que separe las asignaciones en lineas distintas
-    #    nonshared_models_declarations.append(model_name_expression)
-    
+   
     model_name = sk_dict['name']
     nombre = ast.Name(id=model_name, ctx=ast.Store())
     #valor = ast.NameConstant(value=None) #Esto era cuando no teniamos array de modelos
@@ -801,20 +667,14 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
     parallel_cloudbook_label = Expr(value=Comment(value='#__CLOUDBOOK:PARALLEL__'))
     fout.write(unparse(fix_missing_locations(parallel_cloudbook_label)))
     #Aqui cambiamos los model por model[i]
-    ##for model_name in sk_dict.keys():
-    ##    ModelArrayTransform(model_name).visit(node_data_vars_reduced)
+ 
     ModelArrayTransform(model_name).visit(node_data_vars_reduced)
     func_node = FunctionDef(
         name="skynnet_train_" + str(block_number),
         args=arguments(args=[ast.arg(arg='sk_i', annotation=None)], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
         body=[node_data_vars_reduced],
         decorator_list=[])
-    ##for model_name in sk_dict.keys():
-    ##    global_node = Global(names=[model_name])
-    ##    func_node.body.insert(0,global_node)
-    ##    #Ademas de llamar a global hay que hacer model.append(None) para permitir los arrays
-    ##    append_node = ast.parse(model_name+".append(None)")
-    ##    func_node.body.insert(1,append_node)
+  
     global_node = Global(names=[model_name])
     func_node.body.insert(0,global_node)
     #Ademas de llamar a global hay que hacer model.append(None) para permitir los arrays
@@ -838,14 +698,11 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         fout.write(unparse(fix_missing_locations(parallel_cloudbook_label)))
         #Declara como variables globales el diccionario de prediccion compuesta y la lista de modelos ya que los va a usar
         prediction_vars = []
-        '''for model_number in range(number_of_models):
-            prediction_vars.append(f"predictions_{block_number}_{model_number}")'''
         prediction_vars.append(f"predictions_{block_number}")
         global_predictions_vars = []
         for prediction in prediction_vars:
             global_predictions_vars.append(Global(names=[prediction]))
         model_vars = []
-        print("peta")
         #for model_name in sk_dict.keys():
         #    model_vars.append(Global(names=[model_name]))
         model_vars.append(Global(names=[model_name]))
@@ -880,18 +737,6 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         assignation_cb_dict = Assign(targets=[label_var], value=value)
         #Asignacion de predicciones, es el final de la funcion, el predictions_x_y[label] = resul
         predictions_assignements = []
-        ##for i,model_name in enumerate(sk_dict.keys()):
-        ##    nombre = prediction_vars[i]
-        ##    valor = Name(id="resul", ctx=ast.Load())
-        ##    prediction_var_target = Subscript(
-        ##        value=Name(id=nombre,ctx=Load()),
-        ##        slice=Index(value=label_var)
-        ##        )
-        ##    prediction_assignment = Assign(targets=[prediction_var_target], value=valor)
-        ##    fix_missing_locations(prediction_assignment)
-        ##    #print(unparse(prediction_assignment))
-        ##    predictions_assignements.append(prediction_assignment)
-
         nombre = prediction_vars[0]
         valor = Name(id="resul", ctx=ast.Load())
         prediction_var_target = Subscript(
@@ -923,10 +768,6 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
             composed_measure = ""
         #print(composed_measure)
         predict_data = None
-        #for model_name in sk_dict.keys():
-        #    to_insert_nodes = sk_dict[model_name]['data_test']
-        #    predict_data = to_insert_nodes
-        #    pred_func_node.body.insert(2,to_insert_nodes)
         
         to_insert_nodes = sk_dict['data_test']
         predict_data = to_insert_nodes
