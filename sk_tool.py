@@ -289,7 +289,7 @@ else:
 {last_neuron[0]} = {datos_y}.shape[-1]#El tam de la ultima dimension'''
     return fix_missing_locations(parse(division_datos))
 
-def division_datos_predict(tipo_datos,categorias,grupos,last_neuron,tipo_red,model_name,medida_compuesta):
+def division_datos_predict(tipo_datos,categorias,grupos,last_neuron,tipo_red,model_name,medida_compuesta, predict_name):
     '''Ya no es division de datos, es la adaptacion del predict para sacar el compuesto
     Medida compuesta puede ser: "acc", "loss","acc,loss"'''
     if tipo_datos == "train":
@@ -394,7 +394,7 @@ def inserta_nodo(sk_dict,model_name,to_insert_node,node_destiny,last_neuron):
 
 
 
-def inserta_filtro_datos(nodo_destino,tipo_funcion,sk_dict,categorias,grupos,last_neuron,tipo_red, medida_compuesta):
+def inserta_filtro_datos(nodo_destino,tipo_funcion,sk_dict,categorias,grupos,last_neuron,tipo_red, medida_compuesta, predict_name):
     '''tipo funcion: general(train y val) predict(test), general es la division para entrenar
     nodo_destino: nodo tipo funcion en el que hay que insertar'''
     model_name = sk_dict['name']
@@ -407,7 +407,7 @@ def inserta_filtro_datos(nodo_destino,tipo_funcion,sk_dict,categorias,grupos,las
             inserta_nodo(sk_dict,model_name,to_insert_node,nodo_destino,last_neuron)
     elif tipo_funcion == "predict":
         if sk_dict["data_test"] != []:
-            to_insert_node = division_datos_predict("test",categorias,grupos,last_neuron,tipo_red,model_name, medida_compuesta)
+            to_insert_node = division_datos_predict("test",categorias,grupos,last_neuron,tipo_red,model_name, medida_compuesta, predict_name)
             nodo_destino.body.insert(8,to_insert_node) #En el predict es distinto, se exactamente donde insertar
     else:
         print(f"Error: el tipo de funcion no es valido ({tipo_funcion})")
@@ -685,11 +685,11 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
     #Meto antes del nodo de creacion del modelo, el codigo para calcular la division de los datos
     composed_measure = "" #Esta variable solo interesa en el predict, es para ver si calculo accuracy o loss o ambos
     if skynnet_config['Type'] == 'MULTICLASS':
-        inserta_filtro_datos(func_node,"general",sk_dict,categorias,grupos,last_neuron,'MULTICLASS', composed_measure)
+        inserta_filtro_datos(func_node,"general",sk_dict,categorias,grupos,last_neuron,'MULTICLASS', composed_measure, prediction_nombre)
     elif skynnet_config['Type'] == 'BINARYCLASS':
-        inserta_filtro_datos(func_node,"general",sk_dict,categorias,grupos,last_neuron,'BINARYCLASS', composed_measure)
+        inserta_filtro_datos(func_node,"general",sk_dict,categorias,grupos,last_neuron,'BINARYCLASS', composed_measure, prediction_nombre)
     elif skynnet_config['Type'] == 'REGRESSION':
-        inserta_filtro_datos(func_node,"general",sk_dict,categorias,grupos,last_neuron,'REGRESSION', composed_measure)
+        inserta_filtro_datos(func_node,"general",sk_dict,categorias,grupos,last_neuron,'REGRESSION', composed_measure, prediction_nombre)
     fout.write(unparse(fix_missing_locations(func_node)))
     
     #Paso 9 - Se escribe la funcion de la prediccion skynnet_prediction_block
@@ -773,11 +773,11 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         predict_data = to_insert_nodes
         pred_func_node.body.insert(2,to_insert_nodes)
         if skynnet_config['Type'] == 'MULTICLASS':
-            inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos,last_neuron,'MULTICLASS', composed_measure)
+            inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos,last_neuron,'MULTICLASS', composed_measure, prediction_nombre)
         elif skynnet_config['Type'] == 'BINARYCLASS':
-            inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos,last_neuron,'BINARYCLASS', composed_measure)
+            inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos,last_neuron,'BINARYCLASS', composed_measure, prediction_nombre)
         elif skynnet_config['Type'] == 'REGRESSION':
-            inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos,last_neuron,'REGRESSION', composed_measure)
+            inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos,last_neuron,'REGRESSION', composed_measure, prediction_nombre)
         fout.write(unparse(fix_missing_locations(pred_func_node)))
 
 
