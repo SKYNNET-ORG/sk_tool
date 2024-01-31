@@ -53,5 +53,41 @@ def combinar_arrays(arrays):
     return arrays_combinados
 '''
 
+def division_datos_fit_multiclass(categorias,grupos,datos_x,datos_y,last_neuron):
+    division_datos = f'''grupos_de_categorias = dividir_array_categorias({datos_y},{categorias},{grupos})
+combinacion_arrays = combinar_arrays(grupos_de_categorias)[sk_i]
+{datos_x} = {datos_x}[np.isin({datos_y},combinacion_arrays)]
+{datos_y} = {datos_y}[np.isin({datos_y},combinacion_arrays)]
+print("======================================")
+print("Skynnet Info: Longitud de los datos de la subred (datos,etiquetas):",len({datos_x}),len({datos_y}))
+print("Skynnet Info: Categorias de esta subred",np.unique({datos_y}))
+print("======================================")
+categorias_incluir = np.unique({datos_y})
+etiquetas_consecutivas = np.arange(len(categorias_incluir))
+{datos_y} = np.searchsorted(categorias_incluir, {datos_y})
+{last_neuron[0]} = len(np.unique({datos_y}))
+'''
+    return division_datos
 
+def division_datos_fit_binaryclass(tipo_datos,datos_x,datos_y,last_neuron):
+    division_datos = f'''
+datos_{tipo_datos}_x_1 = {datos_x}[:len({datos_x})//2]
+datos_{tipo_datos}_x_2 = {datos_x}[len({datos_x})//2:]
+datos_{tipo_datos}_y_1 = {datos_y}[:len({datos_y})//2]
+datos_{tipo_datos}_y_2 = {datos_y}[len({datos_y})//2:]
+if sk_i == 1:
+    {datos_x} = datos_{tipo_datos}_x_1
+    {datos_y} = datos_{tipo_datos}_y_1
+else:
+    {datos_x} = datos_{tipo_datos}_x_2
+    {datos_y} = datos_{tipo_datos}_y_2
+{last_neuron[0]} = 2
+        '''
+    return division_datos
 
+def division_datos_fit_regression(grupos,tipo_datos,datos_y, last_neuron):
+    division_datos = f'''#Is not neccesary to divide data
+{tipo_datos}_splits = np.array_split({datos_y},{grupos},axis=1)
+{datos_y} = {tipo_datos}_splits[sk_i]
+{last_neuron[0]} = {datos_y}.shape[-1]#El tam de la ultima dimension'''
+    return division_datos
