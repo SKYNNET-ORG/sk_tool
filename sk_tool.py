@@ -241,8 +241,7 @@ class GetModelDataVars(ast.NodeVisitor):
         if len(node.targets)==1 and node.targets[0].id in self.data_vars_test:
             self.dict_modelo["data_test"].append(node)
 
-def division_datos_fit(tipo_datos,categorias,grupos,last_neuron,tipo_red):
-    #Determinar tipo de datos que se usa
+def get_data_type(tipo_datos):
     if tipo_datos == "train":
         datos_x = "_DATA_TRAIN_X"
         datos_y = "_DATA_TRAIN_Y"
@@ -254,16 +253,24 @@ def division_datos_fit(tipo_datos,categorias,grupos,last_neuron,tipo_red):
         datos_y = "_DATA_TEST_Y"
     else:
         print("Warning unknown data type")
+        return None,None
+    return datos_x,datos_y
+
+def division_datos_fit(tipo_datos,categorias,grupos,last_neuron,tipo_red):
+    #Determinar tipo de datos que se usa
+    datos_x,datos_y = get_data_type(tipo_datos)
+    if (datos_x,datos_y) != (None,None):
+        #Generar codigo para la division de datos en tiempo real
+        if tipo_red == 'MULTICLASS':
+            division_datos = sk_extra_codes.division_datos_fit_multiclass(categorias, grupos, datos_x,datos_y,last_neuron)
+        elif tipo_red == 'BINARYCLASS':
+            division_datos = sk_extra_codes.division_datos_fit_binaryclass(tipo_datos,datos_x,datos_y,last_neuron)
+        elif tipo_red == 'REGRESSION':
+            division_datos = sk_extra_codes.division_datos_fit_regression(grupos,tipo_datos,datos_y, last_neuron)
+        return fix_missing_locations(parse(division_datos))
+    else:
+        print("Error with training data")
         return None
-        
-    #Generar codigo para la division de datos en tiempo real
-    if tipo_red == 'MULTICLASS':
-        division_datos = sk_extra_codes.division_datos_fit_multiclass(categorias, grupos, datos_x,datos_y,last_neuron)
-    elif tipo_red == 'BINARYCLASS':
-        division_datos = sk_extra_codes.division_datos_fit_binaryclass(tipo_datos,datos_x,datos_y,last_neuron)
-    elif tipo_red == 'REGRESSION':
-        division_datos = sk_extra_codes.division_datos_fit_regression(grupos,tipo_datos,datos_y, last_neuron)
-    return fix_missing_locations(parse(division_datos))
 
 def division_datos_predict(tipo_datos,categorias,grupos,last_neuron,tipo_red,model_name,medida_compuesta, predict_name):
     '''Ya no es division de datos, es la adaptacion del predict para sacar el compuesto
