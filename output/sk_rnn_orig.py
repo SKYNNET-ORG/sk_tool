@@ -135,8 +135,8 @@ def skynnet_prediction_0(sk_i):
     __CLOUDBOOK__['agent']['id'] = 'agente_skynnet'
     #__CLOUDBOOK:ENDREMOVE__
     label = __CLOUDBOOK__['agent']['id'] + str(sk_i)
-    prediction = model[sk_i].predict(_DATA_TEST_X, verbose=1)
-    resul = prediction
+    predicted = model[sk_i].predict(_DATA_TEST_X, verbose=1)
+    resul = predicted
     predictions_0[label] = resul
 
 

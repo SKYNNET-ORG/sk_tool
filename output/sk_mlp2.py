@@ -123,11 +123,11 @@ def skynnet_prediction_0(sk_i):
     grupos_de_categorias = dividir_array_categorias(_DATA_TEST_Y, 10, 3)
     categorias_incluir = combinar_arrays(grupos_de_categorias)[sk_i]
     label += f'{categorias_incluir}'
-    prediction = model[sk_i].predict(_DATA_TEST_X, verbose=1)
+    predicted = model[sk_i].predict(_DATA_TEST_X, verbose=1)
     categorias_str = label[label.find('[') + 1:label.find(']')]
     categorias = np.fromstring(categorias_str, dtype=int, sep=' ')
     resul = []
-    for (i, pred) in enumerate(prediction):
+    for (i, pred) in enumerate(predicted):
         array_final = np.ones(10)
         array_final[categorias] = pred
         resul.append(array_final)

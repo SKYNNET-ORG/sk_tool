@@ -306,17 +306,17 @@ def division_datos_predict(tipo_datos,categorias,grupos,last_neuron,tipo_red,mod
         return None
     if tipo_red == 'MULTICLASS':#MANDO SIEMPRE ACCURACY ADAPT PORQUE SIEMPRE HAY QUE EXPANDIR LA PREDICCION
         no_measure = f'''
-prediction = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
-resul = prediction
+'''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
+resul = '''+f"{predict_name}"+'''
 '''
         accuracy_adapt = f'''grupos_de_categorias = dividir_array_categorias({datos_y},{categorias},{grupos})
 categorias_incluir = combinar_arrays(grupos_de_categorias)[sk_i]
 label+=f"'''+"{categorias_incluir}"+'''"
-prediction = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
+'''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
 categorias_str = label[label.find("[")+1:label.find("]")]
 categorias = np.fromstring(categorias_str, dtype=int,sep=' ')
 resul = []
-for i,pred in enumerate(prediction):
+for i,pred in enumerate('''+f"{predict_name}"+'''):
     array_final = np.ones('''+f"{categorias}"+''')
     array_final[categorias] = pred
     resul.append(array_final)
@@ -334,14 +334,14 @@ for i,pred in enumerate(prediction):
             division_datos = no_measure
     elif tipo_red == 'BINARYCLASS':
         no_measure = f'''
-prediction = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
-resul = prediction
+'''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
+resul = '''+f"{predict_name}"+'''
 '''
         accuracy_adapt = f'''
-prediction = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
+'''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
 categorias = [0,1]
 resul = []
-for i,pred in enumerate(prediction):
+for i,pred in enumerate('''+f"{predict_name}"+'''):
     array_final = np.ones('''+f"{categorias}"+''')
     array_final[categorias] = pred
     resul.append(array_final)
@@ -359,14 +359,14 @@ for i,pred in enumerate(prediction):
             division_datos = no_measure
     elif tipo_red == 'REGRESSION':
         division_datos = f'''
-prediction = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
-resul = prediction
+'''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
+resul = '''+f"{predict_name}"+'''
 '''
         division_datos_not = f'''
-prediction = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
+'''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
 categorias = [0,1]
 resul = []
-for i,pred in enumerate(prediction):
+for i,pred in enumerate('''+f"{predict_name}"+'''):
     array_final = np.ones('''+f"{categorias}"+''')
     array_final[categorias] = pred
     resul.append(array_final)

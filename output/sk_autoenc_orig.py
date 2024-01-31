@@ -127,8 +127,8 @@ def skynnet_prediction_0(sk_i):
     __CLOUDBOOK__['agent']['id'] = 'agente_skynnet'
     #__CLOUDBOOK:ENDREMOVE__
     label = __CLOUDBOOK__['agent']['id'] + str(sk_i)
-    prediction = autoencoder[sk_i].predict(_DATA_TEST_X, verbose=1)
-    resul = prediction
+    reconstructed_img = autoencoder[sk_i].predict(_DATA_TEST_X, verbose=1)
+    resul = reconstructed_img
     predictions_0[label] = resul
 
 
