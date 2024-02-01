@@ -76,12 +76,11 @@ def combinar_arrays(arrays):
 #__CLOUDBOOK:GLOBAL__
 predictions_0 = {}
 #__CLOUDBOOK:NONSHARED__
-autoencoder = []
+autoencoder = [None, None, None, None]
 precision_compuesta = []
 #__CLOUDBOOK:PARALLEL__
 def skynnet_train_0(sk_i):
     global autoencoder
-    autoencoder.append(None)
     ratio = 1
     data_dim_input = 784
     bottleneck = 32

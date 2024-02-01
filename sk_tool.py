@@ -634,7 +634,9 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
     model_name = sk_dict['name']
     nombre = ast.Name(id=model_name, ctx=ast.Store())
     #valor = ast.NameConstant(value=None) #Esto era cuando no teniamos array de modelos
-    valor = ast.List(elts=[], ctx=ast.Load())
+    ##valor = ast.List(elts=[], ctx=ast.Load())
+    params_lista = [ast.Name(id='None', ctx=ast.Load()) for i in range(num_subredes)]
+    valor = ast.List(elts=params_lista, ctx=ast.Load())
     model_name_declaration = ast.Assign(targets=[nombre], value=valor)
     model_name_expression = ast.Expr(value = model_name_declaration) #Como expresion para que separe las asignaciones en lineas distintas
     nonshared_models_declarations.append(model_name_expression)
@@ -661,8 +663,8 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
     global_node = Global(names=[model_name])
     func_node.body.insert(0,global_node)
     #Ademas de llamar a global hay que hacer model.append(None) para permitir los arrays
-    append_node = ast.parse(model_name+".append(None)")
-    func_node.body.insert(1,append_node)
+    ##append_node = ast.parse(model_name+".append(None)")
+    ##func_node.body.insert(1,append_node)
 
     fout.write("\n")#Para evitar que el func_node se escriba en la misma linea que el comentario
     #Meto antes del nodo de creacion del modelo, el codigo para calcular la division de los datos

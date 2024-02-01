@@ -73,12 +73,11 @@ def combinar_arrays(arrays):
 #__CLOUDBOOK:GLOBAL__
 predictions_0 = {}
 #__CLOUDBOOK:NONSHARED__
-model = []
+model = [None, None, None]
 precision_compuesta = []
 #__CLOUDBOOK:PARALLEL__
 def skynnet_train_0(sk_i):
     global model
-    model.append(None)
     _DATA_TRAIN_X = x_train
     _DATA_TRAIN_Y = y_train
     _DATA_VAL_X = x_validate

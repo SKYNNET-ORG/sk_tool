@@ -2,7 +2,7 @@ import tensorflow as tf, numpy as np
 import matplotlib.pyplot as plt
 import time
 
-# Load MNIST data using built-in datasets download function
+#__CLOUDBOOK:NONSHARED__
 mnist = tf.keras.datasets.mnist
 x_train = mnist.load_data()[0][0]
 y_train = mnist.load_data()[0][1]
