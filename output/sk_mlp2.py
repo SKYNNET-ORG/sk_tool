@@ -130,7 +130,6 @@ def skynnet_prediction_0(sk_i):
         array_final = np.ones(10)
         array_final[categorias] = pred
         resul.append(array_final)
-    #MSSE measure to get
     predictions_0[label] = resul
 
 

@@ -272,89 +272,21 @@ def division_datos_fit(tipo_datos,categorias,grupos,last_neuron,tipo_red):
         print("Error with training data")
         return None
 
-def division_datos_predict(tipo_datos,categorias,grupos,last_neuron,tipo_red,model_name,medida_compuesta, predict_name):
+def preparacion_datos_predict(tipo_datos,categorias,grupos,last_neuron,tipo_red,model_name,medida_compuesta, predict_name):
     '''Ya no es division de datos, es la adaptacion del predict para sacar el compuesto
     Medida compuesta puede ser: "acc", "loss","acc,loss"'''
-    if tipo_datos == "train":
-        datos_x = "_DATA_TRAIN_X"
-        datos_y = "_DATA_TRAIN_Y"
-    elif tipo_datos== "validate":
-        datos_x = "_DATA_VAL_X"
-        datos_y = "_DATA_VAL_Y"
-    elif tipo_datos == "test":
-        datos_x = "_DATA_TEST_X"
-        datos_y = "_DATA_TEST_Y"
+    datos_x,datos_y = get_data_type(tipo_datos)
+    if (datos_x,datos_y) != (None,None):
+        if tipo_red == 'MULTICLASS':
+            division_datos = sk_extra_codes.preparacion_datos_predict_multiclass(medida_compuesta,predict_name,model_name,datos_y,categorias,grupos)
+        elif tipo_red == 'BINARYCLASS':
+            division_datos = sk_extra_codes.preparacion_datos_predict_binaryclass(medida_compuesta,predict_name,categorias,model_name)
+        elif tipo_red == 'REGRESSION':
+            division_datos = sk_extra_codes.preparacion_datos_predict_regression(predict_name,model_name,categorias)
+        return fix_missing_locations(parse(division_datos))
     else:
-        print("Warning unknown data type")
+        print("Error with predict data")
         return None
-    if tipo_red == 'MULTICLASS':#MANDO SIEMPRE ACCURACY ADAPT PORQUE SIEMPRE HAY QUE EXPANDIR LA PREDICCION
-        no_measure = f'''
-'''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
-resul = '''+f"{predict_name}"+'''
-'''
-        accuracy_adapt = f'''grupos_de_categorias = dividir_array_categorias({datos_y},{categorias},{grupos})
-categorias_incluir = combinar_arrays(grupos_de_categorias)[sk_i]
-label+=f"'''+"{categorias_incluir}"+'''"
-'''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
-categorias_str = label[label.find("[")+1:label.find("]")]
-categorias = np.fromstring(categorias_str, dtype=int,sep=' ')
-resul = []
-for i,pred in enumerate('''+f"{predict_name}"+'''):
-    array_final = np.ones('''+f"{categorias}"+''')
-    array_final[categorias] = pred
-    resul.append(array_final)
-'''
-        loss_adapt = f'''
-#MSSE measure to get
-'''
-        if medida_compuesta == "acc,loss":
-            division_datos = accuracy_adapt+loss_adapt
-        elif medida_compuesta == "acc":
-            division_datos = accuracy_adapt
-        elif medida_compuesta == "loss":
-            division_datos = accuracy_adapt#no_measure+loss_adapt
-        else:
-            division_datos = no_measure
-    elif tipo_red == 'BINARYCLASS':
-        no_measure = f'''
-'''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
-resul = '''+f"{predict_name}"+'''
-'''
-        accuracy_adapt = f'''
-'''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
-categorias = [0,1]
-resul = []
-for i,pred in enumerate('''+f"{predict_name}"+'''):
-    array_final = np.ones('''+f"{categorias}"+''')
-    array_final[categorias] = pred
-    resul.append(array_final)
-'''
-        loss_adapt = f'''
-#MSSE measure to get
-'''
-        if medida_compuesta == "acc,loss":
-            division_datos = accuracy_adapt#accuracy_adapt+loss_adapt
-        elif medida_compuesta == "acc":
-            division_datos = accuracy_adapt
-        elif medida_compuesta == "loss":
-            division_datos = accuracy_adapt#no_measure+loss_adapt
-        else:
-            division_datos = no_measure
-    elif tipo_red == 'REGRESSION':
-        division_datos = f'''
-'''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
-resul = '''+f"{predict_name}"+'''
-'''
-        division_datos_not = f'''
-'''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
-categorias = [0,1]
-resul = []
-for i,pred in enumerate('''+f"{predict_name}"+'''):
-    array_final = np.ones('''+f"{categorias}"+''')
-    array_final[categorias] = pred
-    resul.append(array_final)
-'''
-    return fix_missing_locations(parse(division_datos))
 
 def inserta_nodo(sk_dict,model_name,to_insert_node,node_destiny,last_neuron):
     
@@ -375,8 +307,6 @@ def inserta_nodo(sk_dict,model_name,to_insert_node,node_destiny,last_neuron):
         for child in node_destiny:
             inserta_nodo(sk_dict, model_name, to_insert_node, child,last_neuron)
 
-
-
 def inserta_filtro_datos(nodo_destino,tipo_funcion,sk_dict,categorias,grupos,last_neuron,tipo_red, medida_compuesta, predict_name):
     '''tipo funcion: general(train y val) predict(test), general es la division para entrenar
     nodo_destino: nodo tipo funcion en el que hay que insertar'''
@@ -390,12 +320,11 @@ def inserta_filtro_datos(nodo_destino,tipo_funcion,sk_dict,categorias,grupos,las
             inserta_nodo(sk_dict,model_name,to_insert_node,nodo_destino,last_neuron)
     elif tipo_funcion == "predict":
         if sk_dict["data_test"] != []:
-            to_insert_node = division_datos_predict("test",categorias,grupos,last_neuron,tipo_red,model_name, medida_compuesta, predict_name)
+            to_insert_node = preparacion_datos_predict("test",categorias,grupos,last_neuron,tipo_red,model_name, medida_compuesta, predict_name)
             nodo_destino.body.insert(8,to_insert_node) #En el predict es distinto, se exactamente donde insertar
     else:
         print(f"Error: el tipo de funcion no es valido ({tipo_funcion})")
-                    
-        
+                            
 def create_new_file(file):
     '''Esta funcion, crea el fichero que vamos a devolver con la herramient sk_tool
     Es un fichero con el mismo nombre pero precedido de "sk_"'''
@@ -954,7 +883,6 @@ def write_sk_global_code(number_of_sk_functions,fo):
     )
     fix_missing_locations(main_block)
     fo.write(unparse(main_block))
-
 
 def main():
     '''Procesa el fichero de entrada y genera el de salida'''
