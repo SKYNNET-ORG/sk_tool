@@ -19,7 +19,6 @@ def debug(msj):
     if debug_option==1:
         print("DEBUG: ",msj)
 
-
 def get_var_from_list(cadena, lista):
     '''Esta funcion se usa para reconocer las variables especificas para capas de neuronas que pedimos que ponga el diseñador
     Esta funcion recibe un string de una variable y una lista de variables
@@ -775,58 +774,8 @@ def write_sk_block_invocation_code(block_number,fo, skynnet_config, nombre_predi
         body=[skynnet_pred_call],
         orelse=[],
     )
-    #Prediccion compuesta
-    codigo_medidas_extra='''
-#No measures in pragma, nothing to add
-'''
-    codigo_prediccion_compuesta =f'''global precision_compuesta
-valores = np.array(list(predictions_{block_number}.values()))
-{nombre_predict} = np.prod(valores,axis=0)
-correctas = 0
-total = 0
-for i in range(len(y_test)):
-    if y_test[i] == np.argmax({nombre_predict}[i]):
-        correctas+=1
-    total+=1
-precision_compuesta.append(correctas/total)
-print("============================================")
-print('Skynnet Info: La accuracy de la prediccion compuesta es: ', precision_compuesta)
-print("============================================")
-'''
-    prediccion_aux = f'''
-global precision_compuesta
-valores = np.array(list(predictions_{block_number}.values()))
-{nombre_predict} = np.prod(valores,axis=0)
-'''
-    codigo_loss_compuesta = f'''
-scce = tf.keras.losses.SparseCategoricalCrossentropy()
-scce_orig=scce(y_test, {nombre_predict}).numpy()
-print('============================================')
-print('Skynnet Info: La loss compuesta es: ', scce_orig)
-print('============================================')
-'''
-    prediccion_loss_regresion = f'''
-{nombre_predict} = np.concatenate(list(predictions_{block_number}.values()), axis=1)
-'''
-    codigo_loss_compuesta_regresion = f'''
-bce = tf.keras.losses.BinaryCrossentropy()
-bce_orig=bce(y_test, {nombre_predict}).numpy()
-print('============================================')
-print('Skynnet Info: La loss compuesta es: ', bce_orig)
-print('============================================')
-'''
-    if composed_measure == "acc,loss": #si es loss y regresion, la loss esta mal, pero peta en la prediccion, no afecta
-        codigo_medidas_extra = codigo_prediccion_compuesta+codigo_loss_compuesta
-    elif composed_measure == "acc":
-        codigo_medidas_extra = codigo_prediccion_compuesta
-    elif composed_measure == "loss" and skynnet_config['Type'] == 'MULTICLASS' :
-        codigo_medidas_extra = prediccion_aux+codigo_loss_compuesta
-    elif composed_measure == "loss" and skynnet_config['Type'] == 'BINARYCLASS' :
-        codigo_medidas_extra = prediccion_aux+codigo_loss_compuesta
-    elif composed_measure == "loss" and skynnet_config['Type'] == 'REGRESSION' :
-        codigo_medidas_extra = prediccion_loss_regresion+codigo_loss_compuesta_regresion
-    else:
-        codigo_medidas_extra = codigo_medidas_extra
+    #Prediccion y loss compuesta
+    codigo_medidas_extra = sk_extra_codes.codigo_medidas_extra(skynnet_config,composed_measure,block_number,nombre_predict)
     codigo_medidas_extra = fix_missing_locations(parse(codigo_medidas_extra))
     #funcion
     func_pred_def = FunctionDef(

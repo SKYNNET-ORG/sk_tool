@@ -94,13 +94,8 @@ def division_datos_fit_regression(grupos,tipo_datos,datos_y, last_neuron):
 
 
 def preparacion_datos_predict_multiclass(medida_compuesta,predict_name,model_name,datos_y,categorias,grupos):
-    if medida_compuesta == "":
-        preparacion_datos = f'''
-'''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
-resul = '''+f"{predict_name}"+'''
-'''
-    else:
-        preparacion_datos = f'''grupos_de_categorias = dividir_array_categorias({datos_y},{categorias},{grupos})
+
+    preparacion_datos = f'''grupos_de_categorias = dividir_array_categorias({datos_y},{categorias},{grupos})
 categorias_incluir = combinar_arrays(grupos_de_categorias)[sk_i]
 label+=f"'''+"{categorias_incluir}"+'''"
 '''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
@@ -112,16 +107,12 @@ for i,pred in enumerate('''+f"{predict_name}"+'''):
     array_final[categorias] = pred
     resul.append(array_final)
 '''
+
     return preparacion_datos
 
 def preparacion_datos_predict_binaryclass(medida_compuesta,predict_name,categorias,model_name):
-    if medida_compuesta == "":
-        preparacion_datos = f'''
-'''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
-resul = '''+f"{predict_name}"+'''
-'''
-    else:
-        preparacion_datos = f'''
+
+    preparacion_datos = f'''
 '''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
 categorias = [0,1]
 resul = []
@@ -130,6 +121,7 @@ for i,pred in enumerate('''+f"{predict_name}"+'''):
     array_final[categorias] = pred
     resul.append(array_final)
 '''
+
     return preparacion_datos
 
 def preparacion_datos_predict_regression(predict_name,model_name,categorias):
@@ -139,86 +131,96 @@ resul = '''+f"{predict_name}"+'''
 '''
     return preparacion_datos
 
-def backup_division_datos_predict(tipo_datos,categorias,grupos,last_neuron,tipo_red,model_name,medida_compuesta, predict_name):
-    '''Ya no es division de datos, es la adaptacion del predict para sacar el compuesto
-    Medida compuesta puede ser: "acc", "loss","acc,loss"'''
-    if tipo_datos == "train":
-        datos_x = "_DATA_TRAIN_X"
-        datos_y = "_DATA_TRAIN_Y"
-    elif tipo_datos== "validate":
-        datos_x = "_DATA_VAL_X"
-        datos_y = "_DATA_VAL_Y"
-    elif tipo_datos == "test":
-        datos_x = "_DATA_TEST_X"
-        datos_y = "_DATA_TEST_Y"
+def codigo_medidas_extra(skynnet_config,composed_measure,block_number,nombre_predict):
+    '''
+    codigo_prediccion_compuesta: codigo para unificar las predicciones y calcular accuracy
+    prediccion_aux: codigo para unificar predicciones (necesario si solo pides loss)
+    codigo_los_compuesta: codigo que calcula la loss de una prediccion
+    prediccion_loss_regresion: codigo para unificar predicciones en problemas de regresion
+    codigo_loss_compuesta_regresion: codigo para calcular la loss compuesta en problemas de regresion
+    codigo_acc_regresion: codigo para indicar que no se calcula accuracy en problemas de regresion
+    codigo_sin_predict: codigo para indicar que tienes que usar el predict en tu coigo original si quieres usar las redes
+    '''
+    codigo_medidas_extra = ""
+    
+    codigo_prediccion_compuesta =f'''global precision_compuesta
+valores = np.array(list(predictions_{block_number}.values()))
+{nombre_predict} = np.prod(valores,axis=0)
+correctas = 0
+total = 0
+for i in range(len(y_test)):
+    if y_test[i] == np.argmax({nombre_predict}[i]):
+        correctas+=1
+    total+=1
+precision_compuesta.append(correctas/total)
+print("============================================")
+print('Skynnet Info: La accuracy de la prediccion compuesta es: ', precision_compuesta)
+print("============================================")
+'''
+    prediccion_aux = f'''
+global precision_compuesta
+valores = np.array(list(predictions_{block_number}.values()))
+{nombre_predict} = np.prod(valores,axis=0)
+'''
+    codigo_loss_compuesta = f'''
+scce = tf.keras.losses.SparseCategoricalCrossentropy()
+scce_orig=scce(y_test, {nombre_predict}).numpy()
+print('============================================')
+print('Skynnet Info: La loss compuesta es: ', scce_orig)
+print('============================================')
+'''
+    prediccion_loss_regresion = f'''
+{nombre_predict} = np.concatenate(list(predictions_{block_number}.values()), axis=1)
+'''
+    codigo_loss_compuesta_regresion = f'''
+bce = tf.keras.losses.BinaryCrossentropy()
+bce_orig=bce(y_test, {nombre_predict}).numpy()
+print('============================================')
+print('Skynnet Info: La loss compuesta es: ', bce_orig)
+print('============================================')
+'''
+    codigo_acc_regresion = f'''
+#There is no acc calculation in regression problems
+'''
+    codigo_sin_predict = f'''
+#Error: There is no prediction in original code, make prediction=model.predict() in order to use it
+'''
+
+    if nombre_predict != "":
+        if composed_measure == "acc,loss":
+            if skynnet_config['Type'] == 'MULTICLASS' or skynnet_config['Type'] == 'BINARYCLASS':
+                codigo_medidas_extra = codigo_prediccion_compuesta+codigo_loss_compuesta
+            else:
+                codigo_medidas_extra = codigo_acc_regresion+ prediccion_loss_regresion + codigo_loss_compuesta_regresion
+        elif composed_measure == "acc":
+            if skynnet_config['Type'] == 'MULTICLASS' or skynnet_config['Type'] == 'BINARYCLASS':
+                codigo_medidas_extra = codigo_prediccion_compuesta
+            else:
+                codigo_medidas_extra = codigo_acc_regresion + prediccion_loss_regresion
+        elif composed_measure == "loss":
+            if skynnet_config['Type'] == 'MULTICLASS' or skynnet_config['Type'] == 'BINARYCLASS':
+                codigo_medidas_extra = prediccion_aux+codigo_loss_compuesta
+            else:
+                codigo_medidas_extra = prediccion_loss_regresion+codigo_loss_compuesta_regresion
+        else: #Si no pide medidas pero puede querer hacer algo con las predicciones, se unifican
+            if skynnet_config['Type'] == 'MULTICLASS' or skynnet_config['Type'] == 'BINARYCLASS':
+                codigo_medidas_extra = prediccion_aux
+            else:
+                codigo_medidas_extra = prediccion_loss_regresion
     else:
-        print("Warning unknown data type")
-        return None
-    if tipo_red == 'MULTICLASS':#MANDO SIEMPRE ACCURACY ADAPT PORQUE SIEMPRE HAY QUE EXPANDIR LA PREDICCION
-        no_measure = f'''
-'''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
-resul = '''+f"{predict_name}"+'''
-'''
-        accuracy_adapt = f'''grupos_de_categorias = dividir_array_categorias({datos_y},{categorias},{grupos})
-categorias_incluir = combinar_arrays(grupos_de_categorias)[sk_i]
-label+=f"'''+"{categorias_incluir}"+'''"
-'''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
-categorias_str = label[label.find("[")+1:label.find("]")]
-categorias = np.fromstring(categorias_str, dtype=int,sep=' ')
-resul = []
-for i,pred in enumerate('''+f"{predict_name}"+'''):
-    array_final = np.ones('''+f"{categorias}"+''')
-    array_final[categorias] = pred
-    resul.append(array_final)
-'''
-        loss_adapt = f'''
-#Loss adapt: Not neccesary in this function, is in the global
-'''
-        if medida_compuesta == "acc,loss":
-            division_datos = accuracy_adapt+loss_adapt
-        elif medida_compuesta == "acc":
-            division_datos = accuracy_adapt
-        elif medida_compuesta == "loss":
-            division_datos = accuracy_adapt#no_measure+loss_adapt
-        else:
-            division_datos = no_measure
-    elif tipo_red == 'BINARYCLASS':
-        no_measure = f'''
-'''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
-resul = '''+f"{predict_name}"+'''
-'''
-        accuracy_adapt = f'''
-'''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
-categorias = [0,1]
-resul = []
-for i,pred in enumerate('''+f"{predict_name}"+'''):
-    array_final = np.ones('''+f"{categorias}"+''')
-    array_final[categorias] = pred
-    resul.append(array_final)
-'''
-        loss_adapt = f'''
-#MSSE measure to get
-'''
-        if medida_compuesta == "acc,loss":
-            division_datos = accuracy_adapt#accuracy_adapt+loss_adapt
-        elif medida_compuesta == "acc":
-            division_datos = accuracy_adapt
-        elif medida_compuesta == "loss":
-            division_datos = accuracy_adapt#no_measure+loss_adapt
-        else:
-            division_datos = no_measure
-    elif tipo_red == 'REGRESSION':
-        division_datos = f'''
-'''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
-resul = '''+f"{predict_name}"+'''
-'''
-        division_datos_not = f'''
-'''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
-categorias = [0,1]
-resul = []
-for i,pred in enumerate('''+f"{predict_name}"+'''):
-    array_final = np.ones('''+f"{categorias}"+''')
-    array_final[categorias] = pred
-    resul.append(array_final)
-'''
-    return fix_missing_locations(parse(division_datos))
+        codigo_medidas_extra = codigo_sin_predict
+
+    '''if composed_measure == "acc,loss": #si es loss y regresion, la loss esta mal, pero peta en la prediccion, no afecta
+        codigo_medidas_extra = codigo_prediccion_compuesta+codigo_loss_compuesta
+    elif composed_measure == "acc":
+        codigo_medidas_extra = codigo_prediccion_compuesta
+    elif composed_measure == "loss" and skynnet_config['Type'] == 'MULTICLASS' :
+        codigo_medidas_extra = prediccion_aux+codigo_loss_compuesta
+    elif composed_measure == "loss" and skynnet_config['Type'] == 'BINARYCLASS' :
+        codigo_medidas_extra = prediccion_aux+codigo_loss_compuesta
+    elif composed_measure == "loss" and skynnet_config['Type'] == 'REGRESSION' :
+        codigo_medidas_extra = prediccion_loss_regresion+codigo_loss_compuesta_regresion
+    else:
+        codigo_medidas_extra = codigo_medidas_extra'''
+
+    return codigo_medidas_extra
