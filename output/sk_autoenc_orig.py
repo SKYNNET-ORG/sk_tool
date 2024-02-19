@@ -77,6 +77,7 @@ def combinar_arrays(arrays):
 predictions_0 = {}
 #__CLOUDBOOK:NONSHARED__
 autoencoder = [None, None, None, None]
+trained_models = []
 precision_compuesta = []
 #__CLOUDBOOK:PARALLEL__
 def skynnet_train_0(sk_i):
@@ -117,6 +118,7 @@ def skynnet_train_0(sk_i):
 #__CLOUDBOOK:PARALLEL__
 def skynnet_prediction_0(sk_i):
     global predictions_0
+    global trained_models
     global autoencoder
     _DATA_TEST_X = x_test
     _DATA_TEST_Y = x_test_out
