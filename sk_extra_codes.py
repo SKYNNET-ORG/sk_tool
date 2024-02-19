@@ -173,10 +173,10 @@ print('============================================')
 {nombre_predict} = np.concatenate(list(predictions_{block_number}.values()), axis=1)
 '''
     codigo_loss_compuesta_regresion = f'''
-bce = tf.keras.losses.BinaryCrossentropy()
-bce_orig=bce(y_test, {nombre_predict}).numpy()
+mse = tf.keras.losses.MeanSquaredError()
+mse_orig=mse(y_test, {nombre_predict}).numpy()
 print('============================================')
-print('Skynnet Info: La loss compuesta es: ', bce_orig)
+print('Skynnet Info: La loss compuesta es: ', mse_orig)
 print('============================================')
 '''
     codigo_acc_regresion = f'''
