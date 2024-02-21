@@ -690,7 +690,8 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         #crear la funcion y meterle lo anterior en el body
         pred_func_node = FunctionDef(
             name="skynnet_prediction_" + str(block_number),
-            args=arguments(args=[ast.arg(arg='sk_i', annotation=None)], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
+            #args=arguments(args=[ast.arg(arg='sk_i', annotation=None)], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
+            args=arguments(args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
             #body=[global_predictions_vars,model_vars,beginremove_cloudbook_label,cloudbook_var_prepare,cloudbook_var_assig, endremove_cloudbook_label,assignation_cb_dict, predictions_assignements],
             body=[global_predictions_vars,model_vars,beginremove_cloudbook_label,cloudbook_var_prepare,cloudbook_var_assig, endremove_cloudbook_label],
             decorator_list=[]
@@ -807,7 +808,8 @@ def write_sk_block_invocation_code(block_number,fo, skynnet_config, nombre_predi
     skynnet_pred_call = Expr(
         value=Call(
             func=Name(id='skynnet_prediction_'+str(block_number), ctx=Load()),
-            args=[ast.arg(arg='i', annotation=None)],
+            #args=[ast.arg(arg='i', annotation=None)],
+            args=[],
             keywords=[],
         )
     )

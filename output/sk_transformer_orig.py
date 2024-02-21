@@ -176,7 +176,7 @@ def skynnet_train_0(sk_i):
     print(' original: tiempo transcurrido (segundos) =', end - start)
     to_predict_models.append(sk_i)
 #__CLOUDBOOK:PARALLEL__
-def skynnet_prediction_0(sk_i):
+def skynnet_prediction_0():
     global predictions_0
     global to_predict_models
     global model
@@ -214,7 +214,7 @@ def skynnet_prediction_global_0():
     _DATA_TEST_X = x_train
     _DATA_TEST_Y = y_train
     for i in range(2):
-        skynnet_prediction_0(i)
+        skynnet_prediction_0()
     #__CLOUDBOOK:SYNC__
     global precision_compuesta
     valores = np.array(list(predictions_0.values()))
