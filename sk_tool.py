@@ -570,9 +570,9 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
     nonshared_models_declarations.append(model_name_expression)
 
     #Incluyo la variable nonlocal predicted_models para que los agentes sepan que predecir y no predigan un modelo que no tienen
-    nonshared_trained_models = parse("trained_models = []")
-    nonshared_trained_models_expr = Expr(value = nonshared_trained_models)
-    nonshared_models_declarations.append(nonshared_trained_models_expr)
+    nonshared_predicted_models = parse("to_predict_models = []")
+    nonshared_predicted_models_expr = Expr(value = nonshared_predicted_models)
+    nonshared_models_declarations.append(nonshared_predicted_models_expr)
 
     fixed_nonshared = map(lambda x: unparse(fix_missing_locations(x)), nonshared_models_declarations)
     fout.writelines(fixed_nonshared)
@@ -595,9 +595,14 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
   
     global_node = Global(names=[model_name])
     func_node.body.insert(0,global_node)
-    #Ademas de llamar a global hay que hacer model.append(None) para permitir los arrays
-    ##append_node = ast.parse(model_name+".append(None)")
-    ##func_node.body.insert(1,append_node)
+    #Tambien se añade como global el to_predict_models
+    global_node = Global(names=["to_predict_models"])
+    func_node.body.insert(1,global_node)
+    #por ultimo meto el append(sk_i)
+    update_trained_subnet = parse("to_predict_models.append(sk_i)")
+    #update_trained_subnet = Expr(value=update_trained_subnet)
+    func_node.body.append(update_trained_subnet)
+
 
     fout.write("\n")#Para evitar que el func_node se escriba en la misma linea que el comentario
     #Meto antes del nodo de creacion del modelo, el codigo para calcular la division de los datos
@@ -620,9 +625,9 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         global_predictions_vars = []
         for prediction in prediction_vars:
             global_predictions_vars.append(Global(names=[prediction]))
-        #Despues del las predicciones meto el trained models, que es necesario para que cada agente sepa a quien ha entrenado
-        trained_models_vars = (Global(names=["trained_models"]))
-        global_predictions_vars.append(trained_models_vars)
+        #Despues del las predicciones meto el predicted models, que es necesario para que cada agente sepa a quien ha entrenado
+        predicted_models_vars = (Global(names=["to_predict_models"]))
+        global_predictions_vars.append(predicted_models_vars)
         model_vars = []
         #for model_name in sk_dict.keys():
         #    model_vars.append(Global(names=[model_name]))

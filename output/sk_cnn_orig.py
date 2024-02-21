@@ -71,11 +71,12 @@ def combinar_arrays(arrays):
 predictions_0 = {}
 #__CLOUDBOOK:NONSHARED__
 cnn_orig = [None, None, None]
-trained_models = []
+to_predict_models = []
 precision_compuesta = []
 #__CLOUDBOOK:PARALLEL__
 def skynnet_train_0(sk_i):
     global cnn_orig
+    global to_predict_models
     _DATA_TRAIN_X = x_train
     _DATA_TRAIN_Y = y_train
     _DATA_TEST_X = x_test
@@ -106,10 +107,11 @@ def skynnet_train_0(sk_i):
     cnn_orig[sk_i].fit(_DATA_TRAIN_X, _DATA_TRAIN_Y, epochs=_EPOCHS, validation_split=0.3)
     end = time.time()
     print(' tiempo de training transcurrido (segundos) =', end - start)
+    to_predict_models.append(sk_i)
 #__CLOUDBOOK:PARALLEL__
 def skynnet_prediction_0(sk_i):
     global predictions_0
-    global trained_models
+    global to_predict_models
     global cnn_orig
     _DATA_TEST_X = x_test
     _DATA_TEST_Y = y_test
