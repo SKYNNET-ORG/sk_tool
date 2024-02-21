@@ -120,19 +120,23 @@ def skynnet_prediction_0(sk_i):
     __CLOUDBOOK__['agent'] = {}
     __CLOUDBOOK__['agent']['id'] = 'agente_skynnet'
     #__CLOUDBOOK:ENDREMOVE__
-    label = __CLOUDBOOK__['agent']['id'] + str(sk_i)
-    grupos_de_categorias = dividir_array_categorias(_DATA_TEST_Y, 10, 3)
-    categorias_incluir = combinar_arrays(grupos_de_categorias)[sk_i]
-    label += f'{categorias_incluir}'
-    predicted = cnn_orig[sk_i].predict(_DATA_TEST_X, verbose=1)
-    categorias_str = label[label.find('[') + 1:label.find(']')]
-    categorias = np.fromstring(categorias_str, dtype=int, sep=' ')
-    resul = []
-    for (i, pred) in enumerate(predicted):
-        array_final = np.ones(10)
-        array_final[categorias] = pred
-        resul.append(array_final)
-    predictions_0[label] = resul
+    #__CLOUDBOOK:LOCK__
+    for sk_i in to_predict_models[:]:
+        to_predict_models.remove(sk_i)
+        label = __CLOUDBOOK__['agent']['id'] + str(sk_i)
+        grupos_de_categorias = dividir_array_categorias(_DATA_TEST_Y, 10, 3)
+        categorias_incluir = combinar_arrays(grupos_de_categorias)[sk_i]
+        label += f'{categorias_incluir}'
+        predicted = cnn_orig[sk_i].predict(_DATA_TEST_X, verbose=1)
+        categorias_str = label[label.find('[') + 1:label.find(']')]
+        categorias = np.fromstring(categorias_str, dtype=int, sep=' ')
+        resul = []
+        for (i, pred) in enumerate(predicted):
+            array_final = np.ones(10)
+            array_final[categorias] = pred
+            resul.append(array_final)
+        predictions_0[label] = resul
+    #__CLOUDBOOK:UNLOCK__
 
 
 #SKYNNET:END

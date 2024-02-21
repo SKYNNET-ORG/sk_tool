@@ -187,15 +187,19 @@ def skynnet_prediction_0(sk_i):
     __CLOUDBOOK__['agent'] = {}
     __CLOUDBOOK__['agent']['id'] = 'agente_skynnet'
     #__CLOUDBOOK:ENDREMOVE__
-    label = __CLOUDBOOK__['agent']['id'] + str(sk_i)
-    predicted = model[sk_i].predict(_DATA_TEST_X, verbose=1)
-    categorias = [0, 1]
-    resul = []
-    for (i, pred) in enumerate(predicted):
-        array_final = np.ones(2)
-        array_final[categorias] = pred
-        resul.append(array_final)
-    predictions_0[label] = resul
+    #__CLOUDBOOK:LOCK__
+    for sk_i in to_predict_models[:]:
+        to_predict_models.remove(sk_i)
+        label = __CLOUDBOOK__['agent']['id'] + str(sk_i)
+        predicted = model[sk_i].predict(_DATA_TEST_X, verbose=1)
+        categorias = [0, 1]
+        resul = []
+        for (i, pred) in enumerate(predicted):
+            array_final = np.ones(2)
+            array_final[categorias] = pred
+            resul.append(array_final)
+        predictions_0[label] = resul
+    #__CLOUDBOOK:UNLOCK__
 
 
 #SKYNNET:END

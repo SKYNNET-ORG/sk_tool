@@ -673,11 +673,26 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         fix_missing_locations(prediction_assignment)
         #print(unparse(prediction_assignment))
         predictions_assignements.append(prediction_assignment)
+
+        #Para ejecutar todos los modelos que le toquen al agente se hace un bucle sobre os modelos que les toca
+        #bucle for
+        to_pred_for_loop = For(
+            target=Name(id='sk_i', ctx=Store()),
+            iter= Subscript(
+                value= Name(id='to_predict_models', ctx= Load()),
+                slice= Slice(lower=None, upper=None, step=None),
+                ctx= Load()
+                ),
+            body=[assignation_cb_dict, predictions_assignements],
+            orelse=[]
+        )
+        
         #crear la funcion y meterle lo anterior en el body
         pred_func_node = FunctionDef(
             name="skynnet_prediction_" + str(block_number),
             args=arguments(args=[ast.arg(arg='sk_i', annotation=None)], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
-            body=[global_predictions_vars,model_vars,beginremove_cloudbook_label,cloudbook_var_prepare,cloudbook_var_assig, endremove_cloudbook_label,assignation_cb_dict, predictions_assignements],
+            #body=[global_predictions_vars,model_vars,beginremove_cloudbook_label,cloudbook_var_prepare,cloudbook_var_assig, endremove_cloudbook_label,assignation_cb_dict, predictions_assignements],
+            body=[global_predictions_vars,model_vars,beginremove_cloudbook_label,cloudbook_var_prepare,cloudbook_var_assig, endremove_cloudbook_label],
             decorator_list=[]
         )
         fout.write("\n")
@@ -698,12 +713,28 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         to_insert_nodes = sk_dict['data_test']
         predict_data = to_insert_nodes
         pred_func_node.body.insert(2,to_insert_nodes)
-        if skynnet_config['Type'] == 'MULTICLASS':
+        '''if skynnet_config['Type'] == 'MULTICLASS':
             inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos,last_neuron,'MULTICLASS', composed_measure, prediction_nombre)
         elif skynnet_config['Type'] == 'BINARYCLASS':
             inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos,last_neuron,'BINARYCLASS', composed_measure, prediction_nombre)
         elif skynnet_config['Type'] == 'REGRESSION':
             inserta_filtro_datos(pred_func_node,"predict",sk_dict,categorias,grupos,last_neuron,'REGRESSION', composed_measure, prediction_nombre)
+        '''
+        #Cambios por uso del bucle de to_predict_models
+        to_insert_node = preparacion_datos_predict("test",categorias,grupos,last_neuron,skynnet_config['Type'],model_name, composed_measure, prediction_nombre)
+        to_pred_for_loop.body.insert(1,to_insert_node) #En el predict es distinto, se exactamente donde insertar
+        remove_model = parse("to_predict_models.remove(sk_i)")
+        to_pred_for_loop.body.insert(0,remove_model)
+
+        #locks de cloudbook para no repetir ejecuciones
+        lock_cloudbook_label=Comment(value='#__CLOUDBOOK:LOCK__')
+        unlock_cloudbook_label=Comment(value='#__CLOUDBOOK:UNLOCK__')
+
+        pred_func_node.body.append(lock_cloudbook_label)
+        pred_func_node.body.append(to_pred_for_loop)
+        pred_func_node.body.append(unlock_cloudbook_label)
+
+
         fout.write(unparse(fix_missing_locations(pred_func_node)))
 
 
