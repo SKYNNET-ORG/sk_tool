@@ -16,7 +16,7 @@ x_train = x_train.reshape(-1,28,28,1)
 x_test = x_test.reshape(-1,28,28,1)
 
 
-#SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
+#SKYNNET:BEGIN_MULTICLASS_LOSS
 
 _DATA_TRAIN_X = x_train
 _DATA_TRAIN_Y = y_train

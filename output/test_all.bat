@@ -1,7 +1,9 @@
+echo off
 
 for /r %%i in (*.py) do (
-    rem py "%%i" 1>"salida_%%~ni.txt" 2>"error_%%~ni.txt"
-    py "%%i" 1>"salida_%%~ni.txt" 
+    echo Procesando archivo: %%i
+    py "%%i" 1>"salida_%%~ni.txt" 2>"error_%%~ni.txt"
+    rem py "%%i" 1>"salida_%%~ni.txt" 
 )
 
 pause

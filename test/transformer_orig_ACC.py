@@ -57,7 +57,7 @@ y_train = y_train[idx]
 x_test = x_train
 y_test = y_train
 
-#SKYNNET:BEGIN_BINARYCLASS_ACC_LOSS
+#SKYNNET:BEGIN_BINARYCLASS_ACC
 
 _DATA_TRAIN_X = x_train
 _DATA_TRAIN_Y = y_train

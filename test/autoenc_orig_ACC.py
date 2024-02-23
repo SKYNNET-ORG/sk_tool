@@ -22,7 +22,7 @@ x_test_out = x_test_out.reshape((len(x_test_out),np.prod(x_test_out.shape[1:])))
 y_test = x_test_out
 y_train = x_train_out
 
-#SKYNNET:BEGIN_REGRESSION_LOSS
+#SKYNNET:BEGIN_REGRESSION_ACC
 ratio=1
 data_dim_input=784
 bottleneck=32
@@ -79,7 +79,7 @@ for i in range(n):
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
 
-plt.show()
+#plt.show()
 print("Todo terminado")
 print("Adios")
 

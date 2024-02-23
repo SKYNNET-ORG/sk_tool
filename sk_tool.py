@@ -5,6 +5,7 @@ import sys
 import re
 from ast_comments import *
 from math import comb,ceil
+import glob
 
 
 #Variables globales
@@ -373,7 +374,7 @@ def prepare_sk_file(file):
     save_init_code = True
     save_post_sk_code = False
     skynnet_configs = []
-    file = "input/"+file
+    #file = "input/"+file
 
     with open(file,'r') as fi:
         line = fi.readline()
@@ -879,11 +880,18 @@ def write_sk_global_code(number_of_sk_functions,fo):
     fix_missing_locations(main_block)
     fo.write(unparse(main_block))
 
-def main():
+def main(test=False):
     '''Procesa el fichero de entrada y genera el de salida'''
     global num_subredes
+    global file
+    print(file)
     print(f"num subredes original {num_subredes}")
     sk_file = create_new_file(file)
+    #Si es test el fichero se coge de otro lado
+    if test:
+        file = "test/"+file
+    else:
+        file = "input/"+file
     sk_trees,init_code,post_sk_codes,skynnet_configs = prepare_sk_file(file)
     print(skynnet_configs)
     num_sk_blocks = len(skynnet_configs) #Cuantos bloques skynnet hay
@@ -905,10 +913,7 @@ def main():
         fo.write("\n\n")
 
 if __name__=="__main__":
-    if len(sys.argv)!=3:
-        print("Usage: py sk_tool.py file num_machines")
-        sys.exit()
-    else:
+    if len(sys.argv) == 3:
         n = int(sys.argv[2])
         file = sys.argv[1]
         if file.find(".py") == -1:
@@ -916,5 +921,49 @@ if __name__=="__main__":
         print("Fichero: {} en {} subredes".format(file,n))
         num_subredes = n
         main()
+    elif len(sys.argv) == 2:
+        if sys.argv[1]=='test':
+            n = 4
+            num_subredes = n
+            test = True
+            carpeta = "./test"
+            for test_file in glob.glob(carpeta+'/*'):
+                file = test_file.replace(carpeta,"")[1:]
+                #print(file)
+                main(test)
+        else:
+            print("Usage: py sk_tool.py file num_machines")
+            sys.exit()
+    else:
+        print("Usage: py sk_tool.py file num_machines")
+        sys.exit()
+    '''
+    if len(sys.argv)!=3:
+        print("Usage: py sk_tool.py file num_machines")
+        sys.exit()
+    elif len(sys.argv) == 2:
+        if sys.argv[1]=='test':
+            n = 4
+            test = True
+            carpeta = "./test"
+            for test_file in glob.glob(carpeta+'/*'):
+                file = test_file
+                main(test)
+            import subprocess
+            # Ruta al archivo batch que deseas ejecutar
+            ruta_archivo_bat = './output/test_all.bat'
+            # Ejecuta el archivo batch
+            #subprocess.call([ruta_archivo_bat])
+        else:
+            print("Usage: py sk_tool.py file num_machines")
+            sys.exit()
+    else:
+        n = int(sys.argv[2])
+        file = sys.argv[1]
+        if file.find(".py") == -1:
+            file = file+".py"
+        print("Fichero: {} en {} subredes".format(file,n))
+        num_subredes = n
+        main()'''
 
 

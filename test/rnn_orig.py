@@ -19,7 +19,7 @@ x_validate, y_validate = x_test[:-10], y_test[:-10]
 x_test, y_test = x_test[-10:], y_test[-10:]
 
 
-#SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
+#SKYNNET:BEGIN_MULTICLASS
 
 _DATA_TRAIN_X = x_train
 _DATA_TRAIN_Y = y_train
