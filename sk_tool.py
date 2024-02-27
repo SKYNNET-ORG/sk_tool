@@ -241,6 +241,32 @@ class GetModelDataVars(ast.NodeVisitor):
         if len(node.targets)==1 and node.targets[0].id in self.data_vars_test:
             self.dict_modelo["data_test"].append(node)
 
+# Clase de visitante para buscar definiciones de función y agregar nonlocal
+class NonlocalAdder(ast.NodeTransformer):
+
+    data_vars_train = ["_DATA_TRAIN_X","_DATA_TRAIN_Y"]
+    data_vars_val = ["_DATA_VAL_X","_DATA_VAL_Y"]
+    data_vars_test = ["_DATA_TEST_X","_DATA_TEST_Y"]
+
+    def __init__(self,dict_modelo,tipo_fun):
+        self.dict_modelo = dict_modelo
+        self.tipo_fun = tipo_fun #Tipo de la funcion principal, la que visitas es interna
+
+
+    def visit_FunctionDef(self, node):
+        if 'skynnet_train' not in node.name:
+            if self.tipo_fun=='train':
+                if self.dict_modelo['data_train'] != []:
+                    node.body.insert(0,ast.Nonlocal(names=self.data_vars_train))
+                if self.dict_modelo['data_val'] != []:
+                    node.body.insert(0,ast.Nonlocal(names=self.data_vars_val))
+            #TODO si hace falta en el predict
+            #elif tipo_fun=='predict':
+            self.generic_visit(node)
+            return node
+        self.generic_visit(node)
+        return node
+
 def get_data_type(tipo_datos):
     if tipo_datos == "train":
         datos_x = "_DATA_TRAIN_X"
@@ -614,6 +640,11 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         inserta_filtro_datos(func_node,"general",sk_dict,categorias,grupos,last_neuron,'BINARYCLASS', composed_measure, prediction_nombre)
     elif skynnet_config['Type'] == 'REGRESSION':
         inserta_filtro_datos(func_node,"general",sk_dict,categorias,grupos,last_neuron,'REGRESSION', composed_measure, prediction_nombre)
+    
+    #Antes de escribir la funcion busco si tiene funciones internas y escribo el nonlocal de las variables necesarias
+    nonlocal_adder = NonlocalAdder(sk_dict,'train')
+    func_node = nonlocal_adder.visit(func_node)
+
     fout.write(unparse(fix_missing_locations(func_node)))
     
     #Paso 9 - Se escribe la funcion de la prediccion skynnet_prediction_block
@@ -741,6 +772,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
 
 
     fout.write('\n\n')
+    print(sk_dict)
     return num_subredes,prediction_nombre,nodos_post_predict,predict_data
 
 def write_sk_block_invocation_code(block_number,fo, skynnet_config, nombre_predict, nodos_post_predict, predict_data):
