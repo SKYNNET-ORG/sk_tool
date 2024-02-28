@@ -77,7 +77,6 @@ predictions_0 = {}
 #__CLOUDBOOK:NONSHARED__
 model = [None, None, None]
 to_predict_models = []
-precision_compuesta = []
 #__CLOUDBOOK:PARALLEL__
 def skynnet_train_0(sk_i):
     global model
@@ -172,7 +171,8 @@ def skynnet_prediction_global_0():
     for i in range(3):
         skynnet_prediction_0()
     #__CLOUDBOOK:SYNC__
-    global precision_compuesta
+    global predictions_0
+    precision_compuesta = []
     valores = np.array(list(predictions_0.values()))
     predicted = np.prod(valores, axis=0)
     correctas = 0

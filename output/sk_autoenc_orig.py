@@ -80,7 +80,6 @@ predictions_0 = {}
 #__CLOUDBOOK:NONSHARED__
 autoencoder = [None, None, None, None]
 to_predict_models = []
-precision_compuesta = []
 #__CLOUDBOOK:PARALLEL__
 def skynnet_train_0(sk_i):
     global autoencoder
@@ -155,6 +154,7 @@ def skynnet_prediction_global_0():
     for i in range(4):
         skynnet_prediction_0()
     #__CLOUDBOOK:SYNC__
+    global predictions_0
     reconstructed_img = np.concatenate(list(predictions_0.values()), axis=1)
     mse = tf.keras.losses.MeanSquaredError()
     mse_orig = mse(y_test, reconstructed_img).numpy()

@@ -143,7 +143,8 @@ def codigo_medidas_extra(skynnet_config,composed_measure,block_number,nombre_pre
     '''
     codigo_medidas_extra = ""
     
-    codigo_prediccion_compuesta =f'''global precision_compuesta
+    codigo_prediccion_compuesta =f'''global predictions_{block_number}
+precision_compuesta = []
 valores = np.array(list(predictions_{block_number}.values()))
 {nombre_predict} = np.prod(valores,axis=0)
 correctas = 0
@@ -158,7 +159,8 @@ print('Skynnet Info: La accuracy de la prediccion compuesta es: ', precision_com
 print("============================================")
 '''
     prediccion_aux = f'''
-global precision_compuesta
+global predictions_{block_number}
+precision_compuesta = []
 valores = np.array(list(predictions_{block_number}.values()))
 {nombre_predict} = np.prod(valores,axis=0)
 '''
@@ -170,6 +172,7 @@ print('Skynnet Info: La loss compuesta es: ', scce_orig)
 print('============================================')
 '''
     prediccion_loss_regresion = f'''
+global predictions_{block_number}
 {nombre_predict} = np.concatenate(list(predictions_{block_number}.values()), axis=1)
 '''
     codigo_loss_compuesta_regresion = f'''

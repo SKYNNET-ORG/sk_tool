@@ -603,9 +603,9 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
 
     fixed_nonshared = map(lambda x: unparse(fix_missing_locations(x)), nonshared_models_declarations)
     fout.writelines(fixed_nonshared)
-    #Añado la precision compuesta como una variable nonshared
-    precision_compuesta= parse("precision_compuesta=[]")
-    fout.write(unparse(fix_missing_locations(Expr(value = precision_compuesta))))
+    #Añado la precision compuesta como una variable nonshared ##No hace falta, la declaro localmente al predecir
+    #precision_compuesta= parse("precision_compuesta=[]")
+    #fout.write(unparse(fix_missing_locations(Expr(value = precision_compuesta))))
     
     #Paso 8: Funcion skynnet block que divide datos, crea y entrena modelos
     #Se llama block por el bloque skynnet que gestiona, puede trabajar con varios modelos
@@ -772,7 +772,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
 
 
     fout.write('\n\n')
-    print(sk_dict)
+    #print(sk_dict)
     return num_subredes,prediction_nombre,nodos_post_predict,predict_data
 
 def write_sk_block_invocation_code(block_number,fo, skynnet_config, nombre_predict, nodos_post_predict, predict_data):
