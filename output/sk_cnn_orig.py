@@ -136,7 +136,7 @@ def skynnet_prediction_0():
         for (i, pred) in enumerate(predicted):
             array_final = np.ones(10)
             array_final[categorias] = pred
-            resul.append(array_final)
+            resul.append(array_final.tolist())
         predictions_0[label] = resul
     #__CLOUDBOOK:UNLOCK__
 

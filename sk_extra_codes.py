@@ -105,7 +105,7 @@ resul = []
 for i,pred in enumerate('''+f"{predict_name}"+'''):
     array_final = np.ones('''+f"{categorias}"+''')
     array_final[categorias] = pred
-    resul.append(array_final)
+    resul.append(array_final.tolist())
 '''
 
     return preparacion_datos
@@ -119,7 +119,7 @@ resul = []
 for i,pred in enumerate('''+f"{predict_name}"+'''):
     array_final = np.ones('''+f"{categorias}"+''')
     array_final[categorias] = pred
-    resul.append(array_final)
+    resul.append(array_final.tolist())
 '''
 
     return preparacion_datos
@@ -127,7 +127,7 @@ for i,pred in enumerate('''+f"{predict_name}"+'''):
 def preparacion_datos_predict_regression(predict_name,model_name,categorias):
     preparacion_datos = f'''
 '''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
-resul = '''+f"{predict_name}"+'''
+resul = '''+f"{predict_name}"+'''.tolist()
 '''
     return preparacion_datos
 

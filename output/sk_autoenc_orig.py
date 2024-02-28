@@ -136,7 +136,7 @@ def skynnet_prediction_0():
         to_predict_models.remove(sk_i)
         label = __CLOUDBOOK__['agent']['id'] + str(sk_i)
         reconstructed_img = autoencoder[sk_i].predict(_DATA_TEST_X, verbose=1)
-        resul = reconstructed_img
+        resul = reconstructed_img.tolist()
         predictions_0[label] = resul
     #__CLOUDBOOK:UNLOCK__
 
