@@ -20,6 +20,29 @@ def debug(msj):
     if debug_option==1:
         print("DEBUG: ",msj)
 
+def tab_indent(file):
+    # Leer el contenido del archivo
+    with open(file, 'r') as archivo:
+        lineas = archivo.readlines()
+
+    # Reemplazar espacios por tabuladores
+    for i in range(len(lineas)):
+        # Contar espacios al inicio de la línea
+        espacios = 0
+        for char in lineas[i]:
+            if char == ' ':
+                espacios += 1
+            else:
+                break
+        # Reemplazar espacios por tabuladores
+        lineas[i] = '\t' * (espacios // 4) + '\t' * (espacios % 4) + lineas[i][espacios:]
+
+    # Escribir el contenido modificado de vuelta al archivo
+    with open(file, 'w') as archivo:
+        archivo.writelines(lineas)
+
+    print("Indentación convertida a tabuladores.")
+
 def get_var_from_list(cadena, lista):
     '''Esta funcion se usa para reconocer las variables especificas para capas de neuronas que pedimos que ponga el diseñador
     Esta funcion recibe un string de una variable y una lista de variables
@@ -943,6 +966,8 @@ def main(test=False):
         #Escribo la llamada a todos los bloques
         write_sk_global_code(num_sk_blocks,fo)
         fo.write("\n\n")
+    ##Cambiamos indentacion de espacios a tabuladores para cloudbook
+    tab_indent(sk_file)
 
 if __name__=="__main__":
     if len(sys.argv) == 3:
