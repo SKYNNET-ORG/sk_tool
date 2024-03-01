@@ -2,7 +2,9 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 import tensorflow as tf, numpy as np
 import matplotlib.pyplot as plt
+import math
 import time
+import sys
 
 #__CLOUDBOOK:NONSHARED__
 mnist = tf.keras.datasets.mnist
@@ -11,12 +13,13 @@ y_train = mnist.load_data()[0][1]
 x_test = mnist.load_data()[1][0]
 y_test = mnist.load_data()[1][1]
 
-#Noramalize the pixel values by deviding each pixel by 255
 x_train = x_train / 255.0
-x_test =  x_test / 255.0
+x_test = x_test / 255.0
+y_train =np.where(y_train % 2 == 0,0,1)
+y_test =np.where(y_test % 2 == 0,0,1)
 
 
-#SKYNNET:BEGIN_MULTICLASS
+#SKYNNET:BEGIN_BINARYCLASS
 
 #__CLOUDBOOK:LOCAL__
 def dividir_array_categorias(array, n, m):
@@ -72,7 +75,7 @@ def combinar_arrays(arrays):
 #__CLOUDBOOK:GLOBAL__
 predictions_0 = {}
 #__CLOUDBOOK:NONSHARED__
-model = [None, None, None]
+model = [None, None]
 to_predict_models = []
 #__CLOUDBOOK:PARALLEL__
 def skynnet_train_0(sk_i):
@@ -82,22 +85,21 @@ def skynnet_train_0(sk_i):
 	_DATA_TRAIN_Y = y_train
 	_DATA_TEST_X = x_test
 	_DATA_TEST_Y = y_test
-	_NEURON_1 = 86
-	_NEURON_2 = 40
-	_NEURON_3 = 7
-	_EPOCHS = 7
-	grupos_de_categorias = dividir_array_categorias(_DATA_TRAIN_Y, 10, 3)
-	combinacion_arrays = combinar_arrays(grupos_de_categorias)[sk_i]
-	_DATA_TRAIN_X = _DATA_TRAIN_X[np.isin(_DATA_TRAIN_Y, combinacion_arrays)]
-	_DATA_TRAIN_Y = _DATA_TRAIN_Y[np.isin(_DATA_TRAIN_Y, combinacion_arrays)]
-	print('======================================')
-	print('Skynnet Info: Longitud de los datos de la subred (datos,etiquetas):', len(_DATA_TRAIN_X), len(_DATA_TRAIN_Y))
-	print('Skynnet Info: Categorias de esta subred', np.unique(_DATA_TRAIN_Y))
-	print('======================================')
-	categorias_incluir = np.unique(_DATA_TRAIN_Y)
-	etiquetas_consecutivas = np.arange(len(categorias_incluir))
-	_DATA_TRAIN_Y = np.searchsorted(categorias_incluir, _DATA_TRAIN_Y)
-	_NEURON_3 = len(np.unique(_DATA_TRAIN_Y))
+	_NEURON_1 = 16
+	_NEURON_2 = 8
+	_NEURON_3 = 1
+	_EPOCHS = 4
+	datos_train_x_1 = _DATA_TRAIN_X[:len(_DATA_TRAIN_X) // 2]
+	datos_train_x_2 = _DATA_TRAIN_X[len(_DATA_TRAIN_X) // 2:]
+	datos_train_y_1 = _DATA_TRAIN_Y[:len(_DATA_TRAIN_Y) // 2]
+	datos_train_y_2 = _DATA_TRAIN_Y[len(_DATA_TRAIN_Y) // 2:]
+	if sk_i == 1:
+		_DATA_TRAIN_X = datos_train_x_1
+		_DATA_TRAIN_Y = datos_train_y_1
+	else:
+		_DATA_TRAIN_X = datos_train_x_2
+		_DATA_TRAIN_Y = datos_train_y_2
+	_NEURON_3 = 2
 	inputs = tf.keras.Input(shape=(28, 28))
 	x = tf.keras.layers.Flatten()(inputs)
 	x = tf.keras.layers.Dense(_NEURON_1, activation='relu')(x)
@@ -105,11 +107,11 @@ def skynnet_train_0(sk_i):
 	outputs = tf.keras.layers.Dense(_NEURON_3, activation='softmax')(x)
 	model[sk_i] = tf.keras.Model(inputs=inputs, outputs=outputs)
 	print(model[sk_i].summary())
-	start = time.time()
 	model[sk_i].compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+	start = time.time()
 	model[sk_i].fit(_DATA_TRAIN_X, _DATA_TRAIN_Y, validation_split=0.3, epochs=_EPOCHS)
 	end = time.time()
-	print(' tiempo de training transcurrido (segundos) =', end - start)
+	print(' original: tiempo transcurrido (segundos) =', end - start)
 	to_predict_models.append(sk_i)
 #__CLOUDBOOK:PARALLEL__
 def skynnet_prediction_0():
@@ -127,40 +129,48 @@ def skynnet_prediction_0():
 	for sk_i in to_predict_models[:]:
 		to_predict_models.remove(sk_i)
 		label = __CLOUDBOOK__['agent']['id'] + str(sk_i)
-		grupos_de_categorias = dividir_array_categorias(_DATA_TEST_Y, 10, 3)
-		categorias_incluir = combinar_arrays(grupos_de_categorias)[sk_i]
-		label += f'{categorias_incluir}'
 		predicted = model[sk_i].predict(_DATA_TEST_X, verbose=1)
-		categorias_str = label[label.find('[') + 1:label.find(']')]
-		categorias = np.fromstring(categorias_str, dtype=int, sep=' ')
-		resul = []
-		for (i, pred) in enumerate(predicted):
-			array_final = np.ones(10)
-			array_final[categorias] = pred
-			resul.append(array_final.tolist())
+		categorias = [0, 1]
+		resul = predicted.tolist()
 		predictions_0[label] = resul
 	#__CLOUDBOOK:UNLOCK__
 
 
 #SKYNNET:END
 
-
 #__CLOUDBOOK:DU0__
 def skynnet_train_global_0():
-	for i in range(3):
+	for i in range(2):
 		skynnet_train_0(i)
 	#__CLOUDBOOK:SYNC__
 #__CLOUDBOOK:DU0__
 def skynnet_prediction_global_0():
 	_DATA_TEST_X = x_test
 	_DATA_TEST_Y = y_test
-	for i in range(3):
+	for i in range(2):
 		skynnet_prediction_0()
 	#__CLOUDBOOK:SYNC__
 	global predictions_0
 	precision_compuesta = []
-	valores = np.array(list(predictions_0.values()))
-	predicted = np.prod(valores, axis=0)
+	for (idx, i) in enumerate(predictions_0):
+		if idx == 0:
+			p1 = predictions_0[i]
+		elif idx == 1:
+			p2 = predictions_0[i]
+	p1 = np.array(p1)
+	p2 = np.array(p2)
+	p1 = p1.reshape((-1, 2))
+	p2 = p2.reshape((-1, 2))
+	predicted = np.zeros(0)
+	for i in range(0, p1.shape[0]):
+		a = abs(p1[i][0] - p1[i][1])
+		b = abs(p2[i][0] - p2[i][1])
+		c = a - b
+		if c >= 0:
+			predicted = np.append(predicted, p1[i])
+		else:
+			predicted = np.append(predicted, p2[i])
+	predicted.shape = p1.shape
 
 
 #__CLOUDBOOK:MAIN__

@@ -1,25 +1,22 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
-import tensorflow as tf
-#from tensorflow import keras
-import numpy as np
+import tensorflow as tf, numpy as np
 import matplotlib.pyplot as plt
 import time
 
-# cargamos los datos de entrenamiento
-(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-#normalizamos a 0..1
-x_train = x_train.astype('float32') / 255
-x_test = x_test.astype('float32') / 255
+#__CLOUDBOOK:NONSHARED__
+mnist = tf.keras.datasets.mnist
+x_train = mnist.load_data()[0][0]
+y_train = mnist.load_data()[0][1]
+x_test = mnist.load_data()[1][0]
+y_test = mnist.load_data()[1][1]
 
-# We will make a test set of 10 samples and use the other 9990 as validation data.
-# esto quita los ultimos 10 elementos (se queda con 0..9990)
-x_validate, y_validate = x_test[:-10], y_test[:-10]
-# esto coge los 10 ultimos (se queda con 9990..9999)
-x_test, y_test = x_test[-10:], y_test[-10:]
+#Noramalize the pixel values by deviding each pixel by 255
+x_train = x_train / 255.0
+x_test =  x_test / 255.0
 
 
-#SKYNNET:BEGIN_MULTICLASS
+#SKYNNET:BEGIN_MULTICLASS_ACC
 
 #__CLOUDBOOK:LOCAL__
 def dividir_array_categorias(array, n, m):
@@ -83,12 +80,11 @@ def skynnet_train_0(sk_i):
 	global to_predict_models
 	_DATA_TRAIN_X = x_train
 	_DATA_TRAIN_Y = y_train
-	_DATA_VAL_X = x_validate
-	_DATA_VAL_Y = y_validate
 	_DATA_TEST_X = x_test
 	_DATA_TEST_Y = y_test
-	_NEURON_1 = 43
-	_NEURON_2 = 7
+	_NEURON_1 = 86
+	_NEURON_2 = 40
+	_NEURON_3 = 7
 	_EPOCHS = 7
 	grupos_de_categorias = dividir_array_categorias(_DATA_TRAIN_Y, 10, 3)
 	combinacion_arrays = combinar_arrays(grupos_de_categorias)[sk_i]
@@ -101,28 +97,17 @@ def skynnet_train_0(sk_i):
 	categorias_incluir = np.unique(_DATA_TRAIN_Y)
 	etiquetas_consecutivas = np.arange(len(categorias_incluir))
 	_DATA_TRAIN_Y = np.searchsorted(categorias_incluir, _DATA_TRAIN_Y)
-	_NEURON_2 = len(np.unique(_DATA_TRAIN_Y))
-	grupos_de_categorias = dividir_array_categorias(_DATA_VAL_Y, 10, 3)
-	combinacion_arrays = combinar_arrays(grupos_de_categorias)[sk_i]
-	_DATA_VAL_X = _DATA_VAL_X[np.isin(_DATA_VAL_Y, combinacion_arrays)]
-	_DATA_VAL_Y = _DATA_VAL_Y[np.isin(_DATA_VAL_Y, combinacion_arrays)]
-	print('======================================')
-	print('Skynnet Info: Longitud de los datos de la subred (datos,etiquetas):', len(_DATA_VAL_X), len(_DATA_VAL_Y))
-	print('Skynnet Info: Categorias de esta subred', np.unique(_DATA_VAL_Y))
-	print('======================================')
-	categorias_incluir = np.unique(_DATA_VAL_Y)
-	etiquetas_consecutivas = np.arange(len(categorias_incluir))
-	_DATA_VAL_Y = np.searchsorted(categorias_incluir, _DATA_VAL_Y)
-	_NEURON_2 = len(np.unique(_DATA_VAL_Y))
-	model[sk_i] = tf.keras.Sequential()
-	model[sk_i].add(tf.keras.layers.Input(shape=(28, 28)))
-	model[sk_i].add(tf.keras.layers.GRU(_NEURON_1))
-	model[sk_i].add(tf.keras.layers.BatchNormalization())
-	model[sk_i].add(tf.keras.layers.Dense(_NEURON_2, activation='softmax'))
+	_NEURON_3 = len(np.unique(_DATA_TRAIN_Y))
+	inputs = tf.keras.Input(shape=(28, 28))
+	x = tf.keras.layers.Flatten()(inputs)
+	x = tf.keras.layers.Dense(_NEURON_1, activation='relu')(x)
+	x = tf.keras.layers.Dense(_NEURON_2, activation='relu')(x)
+	outputs = tf.keras.layers.Dense(_NEURON_3, activation='softmax')(x)
+	model[sk_i] = tf.keras.Model(inputs=inputs, outputs=outputs)
 	print(model[sk_i].summary())
-	model[sk_i].compile(loss='sparse_categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
 	start = time.time()
-	model[sk_i].fit(_DATA_TRAIN_X, _DATA_TRAIN_Y, validation_data=(_DATA_VAL_X, _DATA_VAL_Y), batch_size=32, epochs=_EPOCHS)
+	model[sk_i].compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+	model[sk_i].fit(_DATA_TRAIN_X, _DATA_TRAIN_Y, validation_split=0.3, epochs=_EPOCHS)
 	end = time.time()
 	print(' tiempo de training transcurrido (segundos) =', end - start)
 	to_predict_models.append(sk_i)
@@ -159,6 +144,7 @@ def skynnet_prediction_0():
 
 #SKYNNET:END
 
+
 #__CLOUDBOOK:DU0__
 def skynnet_train_global_0():
 	for i in range(3):
@@ -175,6 +161,16 @@ def skynnet_prediction_global_0():
 	precision_compuesta = []
 	valores = np.array(list(predictions_0.values()))
 	predicted = np.prod(valores, axis=0)
+	correctas = 0
+	total = 0
+	for i in range(len(y_test)):
+		if y_test[i] == np.argmax(predicted[i]):
+			correctas += 1
+		total += 1
+	precision_compuesta.append(correctas / total)
+	print('============================================')
+	print('Skynnet Info: La accuracy de la prediccion compuesta es: ', precision_compuesta)
+	print('============================================')
 
 
 #__CLOUDBOOK:MAIN__

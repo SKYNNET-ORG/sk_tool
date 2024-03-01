@@ -19,7 +19,7 @@ x_validate, y_validate = x_test[:-10], y_test[:-10]
 x_test, y_test = x_test[-10:], y_test[-10:]
 
 
-#SKYNNET:BEGIN_MULTICLASS
+#SKYNNET:BEGIN_MULTICLASS_LOSS
 
 #__CLOUDBOOK:LOCAL__
 def dividir_array_categorias(array, n, m):
@@ -175,6 +175,11 @@ def skynnet_prediction_global_0():
 	precision_compuesta = []
 	valores = np.array(list(predictions_0.values()))
 	predicted = np.prod(valores, axis=0)
+	scce = tf.keras.losses.SparseCategoricalCrossentropy()
+	scce_orig = scce(y_test, predicted).numpy()
+	print('============================================')
+	print('Skynnet Info: La loss compuesta es: ', scce_orig)
+	print('============================================')
 
 
 #__CLOUDBOOK:MAIN__

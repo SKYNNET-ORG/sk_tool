@@ -19,7 +19,7 @@ x_validate, y_validate = x_test[:-10], y_test[:-10]
 x_test, y_test = x_test[-10:], y_test[-10:]
 
 
-#SKYNNET:BEGIN_MULTICLASS
+#SKYNNET:BEGIN_MULTICLASS_ACC
 
 #__CLOUDBOOK:LOCAL__
 def dividir_array_categorias(array, n, m):
@@ -175,6 +175,16 @@ def skynnet_prediction_global_0():
 	precision_compuesta = []
 	valores = np.array(list(predictions_0.values()))
 	predicted = np.prod(valores, axis=0)
+	correctas = 0
+	total = 0
+	for i in range(len(y_test)):
+		if y_test[i] == np.argmax(predicted[i]):
+			correctas += 1
+		total += 1
+	precision_compuesta.append(correctas / total)
+	print('============================================')
+	print('Skynnet Info: La accuracy de la prediccion compuesta es: ', precision_compuesta)
+	print('============================================')
 
 
 #__CLOUDBOOK:MAIN__

@@ -57,7 +57,7 @@ y_train = y_train[idx]
 x_test = x_train
 y_test = y_train
 
-#SKYNNET:BEGIN_BINARYCLASS
+#SKYNNET:BEGIN_BINARYCLASS_ACC
 
 #__CLOUDBOOK:LOCAL__
 def dividir_array_categorias(array, n, m):
@@ -234,6 +234,16 @@ def skynnet_prediction_global_0():
 		else:
 			predicted = np.append(predicted, p2[i])
 	predicted.shape = p1.shape
+	correctas = 0
+	total = 0
+	for i in range(len(y_test)):
+		if y_test[i] == np.argmax(predicted[i]):
+			correctas += 1
+		total += 1
+	precision_compuesta.append(correctas / total)
+	print('============================================')
+	print('Skynnet Info: La accuracy de la prediccion compuesta es: ', precision_compuesta)
+	print('============================================')
 
 
 #__CLOUDBOOK:MAIN__

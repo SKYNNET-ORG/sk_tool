@@ -22,7 +22,7 @@ x_test_out = x_test_out.reshape((len(x_test_out),np.prod(x_test_out.shape[1:])))
 y_test = x_test_out
 y_train = x_train_out
 
-#SKYNNET:BEGIN_REGRESSION
+#SKYNNET:BEGIN_REGRESSION_ACC_LOSS
 
 #__CLOUDBOOK:LOCAL__
 def dividir_array_categorias(array, n, m):
@@ -154,8 +154,14 @@ def skynnet_prediction_global_0():
 	for i in range(4):
 		skynnet_prediction_0()
 	#__CLOUDBOOK:SYNC__
+	#There is no acc calculation in regression problems
 	global predictions_0
 	reconstructed_img = np.concatenate(list(predictions_0.values()), axis=1)
+	mse = tf.keras.losses.MeanSquaredError()
+	mse_orig = mse(y_test, reconstructed_img).numpy()
+	print('============================================')
+	print('Skynnet Info: La loss compuesta es: ', mse_orig)
+	print('============================================')
 	n = 20
 	plt.figure(figsize=(20, 4))
 	for i in range(n):

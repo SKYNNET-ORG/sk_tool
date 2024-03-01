@@ -115,11 +115,7 @@ def preparacion_datos_predict_binaryclass(medida_compuesta,predict_name,categori
     preparacion_datos = f'''
 '''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
 categorias = [0,1]
-resul = []
-for i,pred in enumerate('''+f"{predict_name}"+'''):
-    array_final = np.ones('''+f"{categorias}"+''')
-    array_final[categorias] = pred
-    resul.append(array_final.tolist())
+resul = '''+f"{predict_name}"+'''.tolist()
 '''
 
     return preparacion_datos
@@ -164,6 +160,72 @@ precision_compuesta = []
 valores = np.array(list(predictions_{block_number}.values()))
 {nombre_predict} = np.prod(valores,axis=0)
 '''
+
+    codigo_prediccion_compuesta_bin = f'''global predictions_{block_number}
+precision_compuesta = []
+for idx,i in enumerate(predictions_{block_number}):
+        if idx == 0:
+            p1=predictions_{block_number}[i]
+        elif idx == 1:
+            p2 = predictions_{block_number}[i]
+p1 = np.array(p1)
+p2 = np.array(p2)
+p1 = p1.reshape((-1,2))
+p2 = p2.reshape((-1,2))
+{nombre_predict}=np.zeros(0)
+for i in range(0, p1.shape[0]):
+    a=abs(p1[i][0]-p1[i][1])
+    b=abs(p2[i][0]-p2[i][1])
+    
+    c=a-b
+        
+    if c>=0:
+        {nombre_predict}=np.append({nombre_predict},p1[i])
+        
+    else:
+        {nombre_predict}=np.append({nombre_predict},p2[i])
+
+{nombre_predict}.shape=p1.shape
+correctas = 0
+total = 0
+for i in range(len(y_test)):
+    if y_test[i] == np.argmax({nombre_predict}[i]):
+        correctas += 1
+    total += 1
+precision_compuesta.append(correctas / total)
+print('============================================')
+print('Skynnet Info: La accuracy de la prediccion compuesta es: ', precision_compuesta)
+print('============================================')
+'''
+
+    prediccion_aux_bin = f'''
+global predictions_{block_number}
+precision_compuesta = []
+for idx,i in enumerate(predictions_{block_number}):
+        if idx == 0:
+            p1=predictions_{block_number}[i]
+        elif idx == 1:
+            p2 = predictions_{block_number}[i]
+p1 = np.array(p1)
+p2 = np.array(p2)
+p1 = p1.reshape((-1,2))
+p2 = p2.reshape((-1,2))
+{nombre_predict}=np.zeros(0)
+for i in range(0, p1.shape[0]):
+    a=abs(p1[i][0]-p1[i][1])
+    b=abs(p2[i][0]-p2[i][1])
+    
+    c=a-b
+        
+    if c>=0:
+        {nombre_predict}=np.append({nombre_predict},p1[i])
+        
+    else:
+        {nombre_predict}=np.append({nombre_predict},p2[i])
+
+{nombre_predict}.shape=p1.shape
+'''
+
     codigo_loss_compuesta = f'''
 scce = tf.keras.losses.SparseCategoricalCrossentropy()
 scce_orig=scce(y_test, {nombre_predict}).numpy()
@@ -191,39 +253,34 @@ print('============================================')
 
     if nombre_predict != "":
         if composed_measure == "acc,loss":
-            if skynnet_config['Type'] == 'MULTICLASS' or skynnet_config['Type'] == 'BINARYCLASS':
+            if skynnet_config['Type'] == 'MULTICLASS':
                 codigo_medidas_extra = codigo_prediccion_compuesta+codigo_loss_compuesta
+            elif skynnet_config['Type'] == 'BINARYCLASS':
+                codigo_medidas_extra = codigo_prediccion_compuesta_bin+codigo_loss_compuesta             
             else:
                 codigo_medidas_extra = codigo_acc_regresion+ prediccion_loss_regresion + codigo_loss_compuesta_regresion
         elif composed_measure == "acc":
-            if skynnet_config['Type'] == 'MULTICLASS' or skynnet_config['Type'] == 'BINARYCLASS':
+            if skynnet_config['Type'] == 'MULTICLASS':
                 codigo_medidas_extra = codigo_prediccion_compuesta
+            elif skynnet_config['Type'] == 'BINARYCLASS':
+                codigo_medidas_extra = codigo_prediccion_compuesta_bin
             else:
                 codigo_medidas_extra = codigo_acc_regresion + prediccion_loss_regresion
         elif composed_measure == "loss":
-            if skynnet_config['Type'] == 'MULTICLASS' or skynnet_config['Type'] == 'BINARYCLASS':
+            if skynnet_config['Type'] == 'MULTICLASS':
                 codigo_medidas_extra = prediccion_aux+codigo_loss_compuesta
+            elif skynnet_config['Type'] == 'BINARYCLASS':
+                codigo_medidas_extra = prediccion_aux_bin+codigo_loss_compuesta
             else:
                 codigo_medidas_extra = prediccion_loss_regresion+codigo_loss_compuesta_regresion
         else: #Si no pide medidas pero puede querer hacer algo con las predicciones, se unifican
-            if skynnet_config['Type'] == 'MULTICLASS' or skynnet_config['Type'] == 'BINARYCLASS':
+            if skynnet_config['Type'] == 'MULTICLASS':
                 codigo_medidas_extra = prediccion_aux
+            elif skynnet_config['Type'] == 'BINARYCLASS':
+                codigo_medidas_extra = prediccion_aux_bin
             else:
                 codigo_medidas_extra = prediccion_loss_regresion
     else:
         codigo_medidas_extra = codigo_sin_predict
-
-    '''if composed_measure == "acc,loss": #si es loss y regresion, la loss esta mal, pero peta en la prediccion, no afecta
-        codigo_medidas_extra = codigo_prediccion_compuesta+codigo_loss_compuesta
-    elif composed_measure == "acc":
-        codigo_medidas_extra = codigo_prediccion_compuesta
-    elif composed_measure == "loss" and skynnet_config['Type'] == 'MULTICLASS' :
-        codigo_medidas_extra = prediccion_aux+codigo_loss_compuesta
-    elif composed_measure == "loss" and skynnet_config['Type'] == 'BINARYCLASS' :
-        codigo_medidas_extra = prediccion_aux+codigo_loss_compuesta
-    elif composed_measure == "loss" and skynnet_config['Type'] == 'REGRESSION' :
-        codigo_medidas_extra = prediccion_loss_regresion+codigo_loss_compuesta_regresion
-    else:
-        codigo_medidas_extra = codigo_medidas_extra'''
 
     return codigo_medidas_extra

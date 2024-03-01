@@ -57,7 +57,7 @@ y_train = y_train[idx]
 x_test = x_train
 y_test = y_train
 
-#SKYNNET:BEGIN_BINARYCLASS
+#SKYNNET:BEGIN_BINARYCLASS_LOSS
 
 #__CLOUDBOOK:LOCAL__
 def dividir_array_categorias(array, n, m):
@@ -234,6 +234,11 @@ def skynnet_prediction_global_0():
 		else:
 			predicted = np.append(predicted, p2[i])
 	predicted.shape = p1.shape
+	scce = tf.keras.losses.SparseCategoricalCrossentropy()
+	scce_orig = scce(y_test, predicted).numpy()
+	print('============================================')
+	print('Skynnet Info: La loss compuesta es: ', scce_orig)
+	print('============================================')
 
 
 #__CLOUDBOOK:MAIN__
