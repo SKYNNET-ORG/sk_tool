@@ -1,0 +1,12 @@
+2024-03-04 10:43:47.795666: I tensorflow/core/platform/cpu_feature_guard.cc:193] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX AVX2
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+Traceback (most recent call last):
+  File "C:\Users\jramosdi\Desktop\Juan\SkyNNet\sk_tool\output\sk_mlp2funcion.py", line 138, in <module>
+    main()
+  File "C:\Users\jramosdi\Desktop\Juan\SkyNNet\sk_tool\output\sk_mlp2funcion.py", line 134, in main
+    skynnet_train_global_0()
+  File "C:\Users\jramosdi\Desktop\Juan\SkyNNet\sk_tool\output\sk_mlp2funcion.py", line 122, in skynnet_train_global_0
+    skynnet_train_0(i)
+  File "C:\Users\jramosdi\Desktop\Juan\SkyNNet\sk_tool\output\sk_mlp2funcion.py", line 112, in skynnet_train_0
+    predicted = trained.predict(_DATA_TEST_X)
+AttributeError: 'History' object has no attribute 'predict'

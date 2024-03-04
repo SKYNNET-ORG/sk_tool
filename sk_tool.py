@@ -41,7 +41,7 @@ def tab_indent(file):
     with open(file, 'w') as archivo:
         archivo.writelines(lineas)
 
-    print("Indentación convertida a tabuladores.")
+    #print("Indentación convertida a tabuladores.")
 
 def get_var_from_list(cadena, lista):
     '''Esta funcion se usa para reconocer las variables especificas para capas de neuronas que pedimos que ponga el diseñador
@@ -133,6 +133,9 @@ class VisitModelFunctions(ast.NodeVisitor):
                 model_name = node.targets[0].id
                 self.dict_modelo = {'name': model_name, 'creation': node}
                 #self.dict_modelo[model_name] = {'creation': node }
+            #Obtencion de alias en asignaciones a funciones del modelo
+            '''if 'fit' in self.dict_modelo:
+                print(f"se supone que fit: {ast.unparse(llamada)}")'''
             self.generic_visit(node)
 
     
@@ -671,6 +674,8 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
     fout.write(unparse(fix_missing_locations(func_node)))
     
     #Paso 9 - Se escribe la funcion de la prediccion skynnet_prediction_block
+    #preparo el predict_data por si no hay prediccion
+    predict_data = None
     #En principio se refiere a un bloque skynnet con n modelos
     if hay_prediccion: #si no la hay escribo la funcion con un pass
         fout.write(unparse(fix_missing_locations(parallel_cloudbook_label)))
@@ -795,7 +800,9 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
 
 
     fout.write('\n\n')
-    #print(sk_dict)
+    for i in sk_dict:
+        print(f"    {i}:{sk_dict[i]}")
+
     return num_subredes,prediction_nombre,nodos_post_predict,predict_data
 
 def write_sk_block_invocation_code(block_number,fo, skynnet_config, nombre_predict, nodos_post_predict, predict_data):
@@ -883,10 +890,12 @@ def write_sk_block_invocation_code(block_number,fo, skynnet_config, nombre_predi
     func_pred_def = FunctionDef(
         name=f'skynnet_prediction_global_{block_number}',
         args=arguments(args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
-        body=[predict_data,for_pred_loop,comment_sync,codigo_medidas_extra,nodos_post_predict],
+        body=[for_pred_loop,comment_sync,codigo_medidas_extra,nodos_post_predict],
         decorator_list=[],
         returns=None,
     )
+    if predict_data != None:
+        func_pred_def.body.insert(0,predict_data)
     fo.write(unparse(fix_missing_locations(func_pred_def)))
     fo.write("\n")
 

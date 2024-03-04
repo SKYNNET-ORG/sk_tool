@@ -25,29 +25,23 @@ _NEURON_2 = 60
 _NEURON_3 = 10
 _EPOCHS = 10
 
-
-#Modelo funcional
-def crear():
-    inputs = tf.keras.Input(shape=(28,28))
-    x = tf.keras.layers.Flatten()(inputs)
-    for i in range(3):
-        x = tf.keras.layers.Dense(_NEURON_1, activation='relu')(x)
-    x = tf.keras.layers.Dense(_NEURON_2, activation='relu')(x)
-    outputs =  tf.keras.layers.Dense(_NEURON_3, activation='softmax')(x)
-    model = tf.keras.Model(inputs=inputs, outputs=outputs)
-    
-    return model
-
 start=time.time()
-model = crear()
+inputs = tf.keras.Input(shape=(28,28))
+x = tf.keras.layers.Flatten()(inputs)
+for i in range(3):
+    x = tf.keras.layers.Dense(_NEURON_1, activation='relu')(x)
+x = tf.keras.layers.Dense(_NEURON_2, activation='relu')(x)
+outputs =  tf.keras.layers.Dense(_NEURON_3, activation='softmax')(x)
+model = tf.keras.Model(inputs=inputs, outputs=outputs)
+
 print(model.summary())
 model.compile(optimizer='adam',
           loss='sparse_categorical_crossentropy',
           metrics=['accuracy'])
-model.fit(_DATA_TRAIN_X, _DATA_TRAIN_Y, validation_split=0.3, epochs=_EPOCHS)
+trained = model.fit(_DATA_TRAIN_X, _DATA_TRAIN_Y, validation_split=0.3, epochs=_EPOCHS)
 end=time.time()
 print (" tiempo de training transcurrido (segundos) =", (end-start))
 
-predicted = model.predict(_DATA_TEST_X)
+predicted = trained.predict(_DATA_TEST_X)
 
 #SKYNNET:END
