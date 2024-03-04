@@ -284,3 +284,12 @@ print('============================================')
         codigo_medidas_extra = codigo_sin_predict
 
     return codigo_medidas_extra
+
+def pred_func_por_defecto(block_number):
+    codigo = f'''
+
+#__CLOUDBOOK:PARALLEL__
+def skynnet_prediction_{block_number}():
+    pass
+'''
+    return codigo

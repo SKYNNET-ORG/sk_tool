@@ -133,9 +133,6 @@ class VisitModelFunctions(ast.NodeVisitor):
                 model_name = node.targets[0].id
                 self.dict_modelo = {'name': model_name, 'creation': node}
                 #self.dict_modelo[model_name] = {'creation': node }
-            #Obtencion de alias en asignaciones a funciones del modelo
-            '''if 'fit' in self.dict_modelo:
-                print(f"se supone que fit: {ast.unparse(llamada)}")'''
             self.generic_visit(node)
 
     
@@ -146,6 +143,7 @@ class VisitModelFunctions(ast.NodeVisitor):
             if isinstance(node.func.value, ast.Name) and node.func.value.id == self.dict_modelo['name']:#.keys():
                 #self.dict_modelo[node.func.value.id][node.func.attr] = node
                 self.dict_modelo[node.func.attr] = node
+                print(f"A ver q pasa {unparse(node)}")
         
         self.generic_visit(node)
 
@@ -798,6 +796,9 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
 
         fout.write(unparse(fix_missing_locations(pred_func_node)))
 
+    else:
+        #print(block_number)
+        fout.write(sk_extra_codes.pred_func_por_defecto(block_number))
 
     fout.write('\n\n')
     for i in sk_dict:
