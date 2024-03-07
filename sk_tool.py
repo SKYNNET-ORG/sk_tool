@@ -75,6 +75,31 @@ def get_var_from_list(cadena, lista):
         else:
             return False,sk_var,-1
 
+class VisitAssignSkVars(NodeVisitor):
+    def __init__(self,reduccion=1):
+        self.reduccion = reduccion #Indica por cuanto hay que dividir el valor de la asignacion
+        self.permiso = True #Si el permiso es false, no se deconstruye porque queda demasiado pequeño
+
+    def visit_Assign(self,node):
+        global sk_vars_list
+        if len(node.targets)==1:
+            variable_valida =  isinstance(node.targets[0], ast.Name) and node.value
+            if variable_valida:
+                testing_variable = get_var_from_list(node.targets[0].id, sk_vars_list)
+                variable_skynnet = testing_variable[0]==True
+                variable_skynnet_name = testing_variable[1]
+                if variable_valida and variable_skynnet:
+                    new_value = ceil(node.value.value/self.reduccion)
+                    if variable_skynnet_name == '_FILTERS_' and new_value<2:
+                        #print(f"WARNING: Reducing the filters variable would make make the last layer with filters smaller than two, so IT WILL NOT DECONSTRUCT THE LAYERS WITH FILTERS.  Check the source code to deconstruct it. ")
+                        print(
+                            "WARNING: Reducing the filters variable would make make the last layer with filters "
+                            "smaller than two, so IT WILL NOT DECONSTRUCT THE LAYERS WITH FILTERS. "
+                            "Check the source code to make it able to deconstruct it."
+                        )                       
+                        self.permiso = False                        
+                        sk_vars_list.remove("_FILTERS_")
+
 class TransformAssignSkVars(ast.NodeTransformer):
     '''Esta clase es la que se usa para detectar de forma automatica las variables de las 
     redes neuronales y reducir el valor que se les da para adecuarlas a las respectivas subredes
@@ -89,11 +114,16 @@ class TransformAssignSkVars(ast.NodeTransformer):
         if len(node.targets)==1:
             variable_valida =  isinstance(node.targets[0], ast.Name) and node.value
             if variable_valida:
-                variable_skynnet = get_var_from_list(node.targets[0].id, sk_vars_list)[0]==True
+                testing_variable = get_var_from_list(node.targets[0].id, sk_vars_list)
+                variable_skynnet = testing_variable[0]==True
+                variable_skynnet_name = testing_variable[1]
                 if variable_valida and variable_skynnet:
                     new_value = ast.Constant(value=(ceil(node.value.value/self.reduccion)))
-                    if new_value.value == 0:
-                        print(f"WARNING: Deconstruction on variable {node.targets[0].id} is gonna be reduced to 0")
+                    #print(f"La variable {variable_skynnet_name} se queda en {new_value.value} por que la reduccion es {node.value.value}/{self.reduccion}")
+                    if new_value.value <2 and variable_skynnet_name != '_EPOCHS':
+                        print(f"WARNING: Deconstruction on variable {node.targets[0].id} is gonna be reduced to {new_value.value} instead of that it will be reduced to 2")
+                        new_value.value = 2
+                    
                     new_node = ast.Assign(targets=node.targets, value=new_value, lineno = node.lineno)
                     return new_node
                 else:
@@ -107,7 +137,7 @@ class TransformAssignSkVars(ast.NodeTransformer):
 
 class VisitModelFunctions(ast.NodeVisitor):
     '''Esta clase es la que permite obtener las asignaciones que se usan para crear modelos en skynnet,
-    ya sea con el modelo normal o funcional. Ademas prepara el diccionario que tendra un resumen de los nodos
+    ya sea con el modelo secuencial o funcional. Ademas prepara el diccionario que tendra un resumen de los nodos
     para las funciones summary, creation, compile, fit, si añadimos alguna funcion nueva se añade al diccionario de forma automatica en otra clase'''
 
     def __init__(self):
@@ -143,7 +173,7 @@ class VisitModelFunctions(ast.NodeVisitor):
             if isinstance(node.func.value, ast.Name) and node.func.value.id == self.dict_modelo['name']:#.keys():
                 #self.dict_modelo[node.func.value.id][node.func.attr] = node
                 self.dict_modelo[node.func.attr] = node
-                print(f"A ver q pasa {unparse(node)}")
+                #print(f"A ver q pasa {unparse(node)}")
         
         self.generic_visit(node)
 
@@ -558,6 +588,8 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         reduccion = num_subredes
     
     #Paso 2 - Reduccion de datos, se reducen las variables de datos indicadas
+    reduction_permission = VisitAssignSkVars(reduccion)
+    reduction_permission.visit(ast_code)
     node_data_vars_reduced = TransformAssignSkVars(reduccion).visit(ast_code)
     
     #Paso 3 - Se guardan en un diccionario los modelos y sus funciones

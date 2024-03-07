@@ -20,18 +20,20 @@ _DATA_TRAIN_X = x_train
 _DATA_TRAIN_Y = y_train
 _DATA_TEST_X = x_test
 _DATA_TEST_Y = y_test
-_NEURON_1 = 128
-_NEURON_2 = 60
-_NEURON_3 = 10
+_FILTERS_1 = 16
+_FILTERS_2 = 8
+_FILTERS_3 = 4
+_NEURON_1 = 10
 _EPOCHS = 10
 
 
 #Modelo funcional
 inputs = tf.keras.Input(shape=(28,28))
 x = tf.keras.layers.Flatten()(inputs)
-x = tf.keras.layers.Dense(_NEURON_1, activation='relu')(x)
-x = tf.keras.layers.Dense(_NEURON_2, activation='relu')(x)
-outputs =  tf.keras.layers.Dense(_NEURON_3, activation='softmax')(x)
+x = tf.keras.layers.Dense(_FILTERS_1, activation='relu')(x)
+x = tf.keras.layers.Dense(_FILTERS_2, activation='relu')(x)
+x = tf.keras.layers.Dense(_FILTERS_3, activation='relu')(x)
+outputs =  tf.keras.layers.Dense(_NEURON_1, activation='softmax')(x)
 model = tf.keras.Model(inputs=inputs, outputs=outputs)
 
 print(model.summary())
