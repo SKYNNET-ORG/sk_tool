@@ -5,8 +5,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
-(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-#(X_train, y_train), (X_test, y_test) = tf.keras.datasets.fashion_mnist.load_data()
+
+#__CLOUDBOOK:NONSHARED__
+mnist = tf.keras.datasets.mnist
+x_train = mnist.load_data()[0][0]
+y_train = mnist.load_data()[0][1]
+x_test = mnist.load_data()[1][0]
+y_test = mnist.load_data()[1][1]
+
 x_train = x_train.astype('float32') / 255
 x_test = x_test.astype('float32') / 255
 
@@ -21,7 +27,6 @@ x_train_out = x_train_out.reshape((len(x_train_out),np.prod(x_train_out.shape[1:
 x_test_out = x_test_out.reshape((len(x_test_out),np.prod(x_test_out.shape[1:])))
 y_test = x_test_out
 y_train = x_train_out
-
 #SKYNNET:BEGIN_REGRESSION_LOSS
 ratio=1
 data_dim_input=784
@@ -61,6 +66,8 @@ print (" tiempo de training transcurrido (segundos) =", (end-start))
 
 
 reconstructed_img = autoencoder.predict(_DATA_TEST_X)
+
+
 n = 20
 plt.figure(figsize=(20, 4))
 for i in range(n):

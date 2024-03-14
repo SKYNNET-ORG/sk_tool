@@ -1,0 +1,2 @@
+C:\Users\jramosdi\Desktop\Juan\SkyNNet\sk_tool\output\sk_VIT_disney.py:359: VisibleDeprecationWarning: Creating an ndarray from ragged nested sequences (which is a list-or-tuple of lists-or-tuples-or ndarrays with different lengths or shapes) is deprecated. If you meant to do this, you must specify 'dtype=object' when creating the ndarray.
+  x_train=np.array(x_train)

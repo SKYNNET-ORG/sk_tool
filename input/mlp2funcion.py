@@ -50,6 +50,6 @@ entrenar(modelo)
 end=time.time()
 print (" tiempo de training transcurrido (segundos) =", (end-start))
 
-#predicted = modelo.predict(_DATA_TEST_X)
+predicted = modelo.predict(_DATA_TEST_X)
 
 #SKYNNET:END

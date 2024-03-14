@@ -15,8 +15,8 @@ y_test = mnist.load_data()[1][1]
 
 x_train = x_train / 255.0
 x_test = x_test / 255.0
-y_train =np.where(y_train % 2 == 0,0,1)
-y_test =np.where(y_test % 2 == 0,0,1)
+y_train = np.where(y_train % 2 == 0,0,1)
+y_test = np.where(y_test % 2 == 0,0,1)
 
 
 #SKYNNET:BEGIN_BINARYCLASS
