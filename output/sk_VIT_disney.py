@@ -189,63 +189,7 @@ def get_data_augmentation_layer(image_size: int, normalization: bool=True) -> ke
 ##################################################################################
 
 ##################################################################################
-#def run_experiment(model, ds_train, ds_test, num_epocas, my_split) -> tf.keras.callbacks.History:
-def run_experiment(model, a,  y_train, num_epocas, my_split, batch_size,lr) -> tf.keras.callbacks.History:
-	# --- Read config ---
-	#config = read_config()
-	#lr=1e-3 #1e-2 #1e-4
-	#optimizer = tf.optimizers.Adam(learning_rate=config["learning_rate"])
-	optimizer = tf.optimizers.Adam(learning_rate=lr)
-	model.compile(
-		optimizer=optimizer,
-		loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-		metrics=[keras.metrics.SparseCategoricalAccuracy(name="accuracy")]
-	)
 
-
-	# --- CHECKPOINTS ---
-	"""
-	checkpoint_filepath = "./checkpoints/mnist"
-	checkpoint_callback = keras.callbacks.ModelCheckpoint(
-		checkpoint_filepath,
-		monitor="val_accuracy",
-		save_best_only=True,
-		save_weights_only=True,
-	)
-	
-	early_stopping_callback = tf.keras.callbacks.EarlyStopping(
-		patience=3,
-		monitor="val_loss",
-		mode="min",
-		restore_best_weights=True
-	)
-	
-	log_dir = f'logs/mnist/' + datetime.now().strftime("%Y%m%d-%H%M%S")
-	tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
-	"""
-	
-	# --- TRAINING ---
-	history = model.fit(
-		#ds_train,
-		a,
-		y_train,
-		#epochs=config["num_epochs"],
-		epochs=num_epocas,
-		#validation_data=ds_test,
-		batch_size=batch_size,
-		shuffle=True,
-		validation_split=my_split,
-		#callbacks=[checkpoint_callback, early_stopping_callback, tensorboard_callback],
-	)
-
-
-	# --- EVALUATION ---
-	"""
-	model.load_weights(checkpoint_filepath)
-	_, accuracy = model.evaluate(ds_test)
-	print(f"Test accuracy: {round(accuracy * 100, 2)}%")
-	S"""
-	return history
 ##################################################################################
 def loadDataset(tipo, ds_name, directorio):
 	# tipo :

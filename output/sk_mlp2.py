@@ -84,9 +84,9 @@ def skynnet_train_0(sk_i):
 	_DATA_TEST_Y = y_test
 	_NEURON_1 = 86
 	_NEURON_2 = 40
-	_NEURON_3 = 2
+	_NEURON_3 = 7
 	_EPOCHS = 7
-	grupos_de_categorias = dividir_array_categorias(_DATA_TRAIN_Y, 3, 3)
+	grupos_de_categorias = dividir_array_categorias(_DATA_TRAIN_Y, 10, 3)
 	combinacion_arrays = combinar_arrays(grupos_de_categorias)[sk_i]
 	_DATA_TRAIN_X = _DATA_TRAIN_X[np.isin(_DATA_TRAIN_Y, combinacion_arrays)]
 	_DATA_TRAIN_Y = _DATA_TRAIN_Y[np.isin(_DATA_TRAIN_Y, combinacion_arrays)]
@@ -127,7 +127,7 @@ def skynnet_prediction_0():
 	for sk_i in to_predict_models[:]:
 		to_predict_models.remove(sk_i)
 		label = __CLOUDBOOK__['agent']['id'] + str(sk_i)
-		grupos_de_categorias = dividir_array_categorias(_DATA_TEST_Y, 3, 3)
+		grupos_de_categorias = dividir_array_categorias(_DATA_TEST_Y, 10, 3)
 		categorias_incluir = combinar_arrays(grupos_de_categorias)[sk_i]
 		label += f'{categorias_incluir}'
 		predicted = model[sk_i].predict(_DATA_TEST_X, verbose=1)
@@ -135,7 +135,7 @@ def skynnet_prediction_0():
 		categorias = np.fromstring(categorias_str, dtype=int, sep=' ')
 		resul = []
 		for (i, pred) in enumerate(predicted):
-			array_final = np.ones(3)
+			array_final = np.ones(10)
 			array_final[categorias] = pred
 			resul.append(array_final.tolist())
 		predictions_0[label] = resul
@@ -143,6 +143,7 @@ def skynnet_prediction_0():
 
 
 #SKYNNET:END
+
 
 
 #__CLOUDBOOK:DU0__

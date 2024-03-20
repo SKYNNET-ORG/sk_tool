@@ -178,7 +178,8 @@ class VisitModelFunctions(ast.NodeVisitor):
         self.generic_visit(node)
 
 class getInputModel(ast.NodeVisitor):
-    '''meto en el dict, el input del diccionario'''
+    '''meto en el dict, el input del diccionario, para tener el nodo en el que insertar division de datos
+    OJO: busca una invocacion a input de tensor flow, no debería haber otro input de otro modulo'''
     def __init__(self,dict_modelo):
         self.dict_modelo = dict_modelo
         #self.model_name = model_name

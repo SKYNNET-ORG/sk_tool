@@ -24,7 +24,7 @@ _DATA_TEST_X = x_test
 _DATA_TEST_Y = y_test
 _NEURON_1 = 128
 _NEURON_2 = 60
-_NEURON_3 = 3
+_NEURON_3 = 10
 _EPOCHS = 10
 
 
@@ -50,3 +50,4 @@ print (" tiempo de training transcurrido (segundos) =", (end-start))
 predicted = model.predict(_DATA_TEST_X)
 
 #SKYNNET:END
+
