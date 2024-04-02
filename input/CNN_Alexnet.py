@@ -153,7 +153,6 @@ _DATA_TRAIN_Y = y_train
 _NEURON_1 = 4096
 _NEURON_2 = 102
 _FILTERS_1 = 384
-_EPOCHS = 30
 
 
 #ALEXNET
@@ -201,15 +200,15 @@ trained_model = model.fit(_DATA_TRAIN_X,
                           _DATA_TRAIN_Y, 
                           validation_split=0.2,
                           batch_size=32,
-                          epochs=_EPOCHS
+                          epochs=15
                           )
 end=time.time()
 print (" tiempo transcurrido (segundos) =", (end-start))
 
 # Visualize loss  and accuracy history
 #--------------------------------------
-cosa="Acc. using"+" DS="+ 'caltech101'+", cat="+str(102)+" size:"+ str(h2)+"x"+str(w2)
-
+#cosa="Acc. using"+" DS="+ 'caltech101'+", cat="+str(102)+" size:"+ str(h2)+"x"+str(w2)
+cosa = "titulo"
 
 plt.title(cosa)
 plt.plot(trained_model.history['accuracy'], 'b-')

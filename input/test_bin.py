@@ -19,7 +19,7 @@ y_train = np.where(y_train % 2 == 0,0,1)
 y_test = np.where(y_test % 2 == 0,0,1)
 
 
-#SKYNNET:BEGIN_BINARYCLASS_ACC_LOSS
+#SKYNNET:BEGIN_BINARYCLASS
 
 _DATA_TRAIN_X = x_train
 _DATA_TRAIN_Y = y_train
@@ -52,5 +52,21 @@ end=time.time()
 print (" original: tiempo transcurrido (segundos) =", (end-start))
 
 predicted = model.predict(_DATA_TEST_X)
+
+correctas = 0
+total = 0
+for i in range(len(_DATA_TRAIN_Y)):
+        if _DATA_TRAIN_Y[i] == np.argmax(predicted[i]):
+                correctas += 1
+        total += 1
+precision = correctas / total
+print('============================================')
+print('La accuracy de la prediccion es: ', precision)
+print('============================================')
+scce = tf.keras.losses.SparseCategoricalCrossentropy()
+scce_orig = scce(_DATA_TRAIN_Y, predicted).numpy()
+print('============================================')
+print('La loss es: ', scce_orig)
+print('============================================')
 
 #SKYNNET:END

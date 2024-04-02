@@ -258,7 +258,7 @@ class VisitLastNeuron(ast.NodeVisitor):
     La variable last_neuron contiene el nombre y el numero de categorias'''
     max_valor = 0
     n_categorias = 0
-    last_neuron = ()
+    last_neuron = ('NEURON_X',0)
 
     def visit_Assign(self, node):
         '''Esta funcion es la que divide por un numero entero las variables de skynnet
@@ -562,6 +562,8 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
     visit_categorias = VisitLastNeuron()
     visit_categorias.visit(ast_code)
     last_neuron = visit_categorias.last_neuron
+    if last_neuron == ('NEURON_X',0):
+        print("Warning there is no _NEURON_ variable at last layer, using generic variable it will no conflict with code")
     #print(last_neuron)
     if skynnet_config['Type'] == 'MULTICLASS':
         categorias = visit_categorias.n_categorias #Esto es igual que last_neuron[1]
@@ -745,10 +747,14 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         value=ast.BinOp(
             left=cloudbook_var,     # Variable adios
             op=ast.Add(),                                  # Operador de suma
-            right=ast.Call(
-                func=ast.Name(id='str', ctx=ast.Load()),    # Función str
-                args=[ast.Name(id='sk_i', ctx=ast.Load())],    # Argumento i
-                keywords=[]
+            right=ast.BinOp(
+                left = Str(s='_'),
+                op=ast.Add(),
+                right=ast.Call(
+                    func=ast.Name(id='str', ctx=ast.Load()),    # Función str
+                    args=[ast.Name(id='sk_i', ctx=ast.Load())],    # Argumento i
+                    keywords=[]
+                )
             )
         )
         assignation_cb_dict = Assign(targets=[label_var], value=value)
