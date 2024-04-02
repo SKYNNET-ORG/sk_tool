@@ -235,6 +235,7 @@ print('============================================')
 '''
     prediccion_loss_regresion = f'''
 global predictions_{block_number}
+predictions_{block_number} = dict(sorted(predictions_{block_number}.items(), key=lambda x: int(x[0].split('_')[-1])))
 {nombre_predict} = np.concatenate(list(predictions_{block_number}.values()), axis=1)
 '''
     codigo_loss_compuesta_regresion = f'''
