@@ -173,8 +173,8 @@ def skynnet_prediction_global_0():
 	predicted.shape = p1.shape
 	correctas = 0
 	total = 0
-	for i in range(len(y_test)):
-		if y_test[i] == np.argmax(predicted[i]):
+	for i in range(len(_DATA_TEST_Y)):
+		if _DATA_TEST_Y[i] == np.argmax(predicted[i]):
 			correctas += 1
 		total += 1
 	precision_compuesta.append(correctas / total)
@@ -182,7 +182,7 @@ def skynnet_prediction_global_0():
 	print('Skynnet Info: La accuracy de la prediccion compuesta es: ', precision_compuesta)
 	print('============================================')
 	scce = tf.keras.losses.SparseCategoricalCrossentropy()
-	scce_orig = scce(y_test, predicted).numpy()
+	scce_orig = scce(_DATA_TEST_Y, predicted).numpy()
 	print('============================================')
 	print('Skynnet Info: La loss compuesta es: ', scce_orig)
 	print('============================================')

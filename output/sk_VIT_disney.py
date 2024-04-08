@@ -398,6 +398,8 @@ def skynnet_train_0(sk_i):
 	global to_predict_models
 	_DATA_TRAIN_X = a
 	_DATA_TRAIN_Y = y_train
+	_DATA_TEST_X = a
+	_DATA_TEST_Y = y_train
 	_NEURON_1 = 171
 	_NEURON_2 = 2
 	_EMBEDDING_ = 22
@@ -482,11 +484,35 @@ def skynnet_train_0(sk_i):
 	plt.ylabel('Percent')
 	plt.show()
 	to_predict_models.append(sk_i)
-
 #__CLOUDBOOK:PARALLEL__
 def skynnet_prediction_0():
-	pass
-
+	global predictions_0
+	global to_predict_models
+	global model
+	_DATA_TEST_X = a
+	_DATA_TEST_Y = y_train
+	#__CLOUDBOOK:BEGINREMOVE__
+	__CLOUDBOOK__ = {}
+	__CLOUDBOOK__['agent'] = {}
+	__CLOUDBOOK__['agent']['id'] = 'agente_skynnet'
+	#__CLOUDBOOK:ENDREMOVE__
+	#__CLOUDBOOK:LOCK__
+	for sk_i in to_predict_models[:]:
+		to_predict_models.remove(sk_i)
+		label = __CLOUDBOOK__['agent']['id'] + ('_' + str(sk_i))
+		grupos_de_categorias = dividir_array_categorias(_DATA_TEST_Y, 3, 3)
+		categorias_incluir = combinar_arrays(grupos_de_categorias)[sk_i]
+		label += f'{categorias_incluir}'
+		prediction = model[sk_i].predict(_DATA_TEST_X, verbose=1)
+		categorias_str = label[label.find('[') + 1:label.find(']')]
+		categorias = np.fromstring(categorias_str, dtype=int, sep=' ')
+		resul = []
+		for (i, pred) in enumerate(prediction):
+			array_final = np.ones(3)
+			array_final[categorias] = pred
+			resul.append(array_final.tolist())
+		predictions_0[label] = resul
+	#__CLOUDBOOK:UNLOCK__
 
 
 #SKYNNET:END
@@ -499,10 +525,30 @@ def skynnet_train_global_0():
 	#__CLOUDBOOK:SYNC__
 #__CLOUDBOOK:DU0__
 def skynnet_prediction_global_0():
+	_DATA_TEST_X = a
+	_DATA_TEST_Y = y_train
 	for i in range(3):
 		skynnet_prediction_0()
 	#__CLOUDBOOK:SYNC__
-	#Error: There is no prediction in original code, make prediction=model.predict() in order to use it
+	global predictions_0
+	precision_compuesta = []
+	valores = np.array(list(predictions_0.values()))
+	prediction = np.prod(valores, axis=0)
+	correctas = 0
+	total = 0
+	for i in range(len(_DATA_TEST_Y)):
+		if _DATA_TEST_Y[i] == np.argmax(prediction[i]):
+			correctas += 1
+		total += 1
+	precision_compuesta.append(correctas / total)
+	print('============================================')
+	print('Skynnet Info: La accuracy de la prediccion compuesta es: ', precision_compuesta)
+	print('============================================')
+	scce = tf.keras.losses.SparseCategoricalCrossentropy()
+	scce_orig = scce(_DATA_TEST_Y, prediction).numpy()
+	print('============================================')
+	print('Skynnet Info: La loss compuesta es: ', scce_orig)
+	print('============================================')
 
 
 #__CLOUDBOOK:MAIN__

@@ -338,6 +338,8 @@ a=a / 255.0
 
 _DATA_TRAIN_X = a
 _DATA_TRAIN_Y = y_train
+_DATA_TEST_X = a
+_DATA_TEST_Y = y_train
 
 _NEURON_1 = 256
 _NEURON_2 = 3
@@ -493,5 +495,7 @@ plt.legend(['train', 'val'], loc='upper left')
 plt.xlabel('Epoch')
 plt.ylabel('Percent')
 plt.show();
+
+prediction = model.predict(_DATA_TEST_X)
 
 #SKYNNET:END

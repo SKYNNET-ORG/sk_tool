@@ -145,8 +145,8 @@ valores = np.array(list(predictions_{block_number}.values()))
 {nombre_predict} = np.prod(valores,axis=0)
 correctas = 0
 total = 0
-for i in range(len(y_test)):
-    if y_test[i] == np.argmax({nombre_predict}[i]):
+for i in range(len(_DATA_TEST_Y)):
+    if _DATA_TEST_Y[i] == np.argmax({nombre_predict}[i]):
         correctas+=1
     total+=1
 precision_compuesta.append(correctas/total)
@@ -188,8 +188,8 @@ for i in range(0, p1.shape[0]):
 {nombre_predict}.shape=p1.shape
 correctas = 0
 total = 0
-for i in range(len(y_test)):
-    if y_test[i] == np.argmax({nombre_predict}[i]):
+for i in range(len(_DATA_TEST_Y)):
+    if _DATA_TEST_Y[i] == np.argmax({nombre_predict}[i]):
         correctas += 1
     total += 1
 precision_compuesta.append(correctas / total)
@@ -228,7 +228,7 @@ for i in range(0, p1.shape[0]):
 
     codigo_loss_compuesta = f'''
 scce = tf.keras.losses.SparseCategoricalCrossentropy()
-scce_orig=scce(y_test, {nombre_predict}).numpy()
+scce_orig=scce(_DATA_TEST_Y, {nombre_predict}).numpy()
 print('============================================')
 print('Skynnet Info: La loss compuesta es: ', scce_orig)
 print('============================================')
@@ -240,7 +240,7 @@ predictions_{block_number} = dict(sorted(predictions_{block_number}.items(), key
 '''
     codigo_loss_compuesta_regresion = f'''
 mse = tf.keras.losses.MeanSquaredError()
-mse_orig=mse(y_test, {nombre_predict}).numpy()
+mse_orig=mse(_DATA_TEST_Y, {nombre_predict}).numpy()
 print('============================================')
 print('Skynnet Info: La loss compuesta es: ', mse_orig)
 print('============================================')

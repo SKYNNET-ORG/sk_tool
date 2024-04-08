@@ -163,7 +163,7 @@ def skynnet_prediction_global_0():
 	predictions_0 = dict(sorted(predictions_0.items(), key=lambda x: int(x[0].split('_')[-1])))
 	reconstructed_img = np.concatenate(list(predictions_0.values()), axis=1)
 	mse = tf.keras.losses.MeanSquaredError()
-	mse_orig = mse(y_test, reconstructed_img).numpy()
+	mse_orig = mse(_DATA_TEST_Y, reconstructed_img).numpy()
 	print('============================================')
 	print('Skynnet Info: La loss compuesta es: ', mse_orig)
 	print('============================================')
