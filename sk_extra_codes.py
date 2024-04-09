@@ -245,6 +245,13 @@ print('============================================')
 print('Skynnet Info: La loss compuesta es: ', mse_orig)
 print('============================================')
 '''
+    codigo_loss_compuesta_bin = f'''
+bce = tf.keras.losses.BinaryCrossentropy()
+bce_orig=bce(_DATA_TEST_Y, {nombre_predict}).numpy()
+print('============================================')
+print('Skynnet Info: La loss compuesta es: ', bce_orig)
+print('============================================')
+'''
     codigo_acc_regresion = f'''
 #There is no acc calculation in regression problems
 '''
@@ -257,7 +264,7 @@ print('============================================')
             if skynnet_config['Type'] == 'MULTICLASS':
                 codigo_medidas_extra = codigo_prediccion_compuesta+codigo_loss_compuesta
             elif skynnet_config['Type'] == 'BINARYCLASS':
-                codigo_medidas_extra = codigo_prediccion_compuesta_bin+codigo_loss_compuesta             
+                codigo_medidas_extra = codigo_prediccion_compuesta_bin+codigo_loss_compuesta            
             else:
                 codigo_medidas_extra = codigo_acc_regresion+ prediccion_loss_regresion + codigo_loss_compuesta_regresion
         elif composed_measure == "acc":
