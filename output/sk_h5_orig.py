@@ -86,30 +86,38 @@ def skynnet_train_0(sk_i):
 	_NEURON_2 = 40
 	_NEURON_3 = 7
 	_EPOCHS = 7
-	grupos_de_categorias = dividir_array_categorias(_DATA_TRAIN_Y, 10, 3)
-	combinacion_arrays = combinar_arrays(grupos_de_categorias)[sk_i]
-	_DATA_TRAIN_X = _DATA_TRAIN_X[np.isin(_DATA_TRAIN_Y, combinacion_arrays)]
-	_DATA_TRAIN_Y = _DATA_TRAIN_Y[np.isin(_DATA_TRAIN_Y, combinacion_arrays)]
-	print('======================================')
-	print('Skynnet Info: Longitud de los datos de la subred (datos,etiquetas):', len(_DATA_TRAIN_X), len(_DATA_TRAIN_Y))
-	print('Skynnet Info: Categorias de esta subred', np.unique(_DATA_TRAIN_Y))
-	print('======================================')
-	categorias_incluir = np.unique(_DATA_TRAIN_Y)
-	etiquetas_consecutivas = np.arange(len(categorias_incluir))
-	_DATA_TRAIN_Y = np.searchsorted(categorias_incluir, _DATA_TRAIN_Y)
-	_NEURON_3 = len(np.unique(_DATA_TRAIN_Y))
-	inputs = tf.keras.Input(shape=(28, 28))
-	x = tf.keras.layers.Flatten()(inputs)
-	x = tf.keras.layers.Dense(_NEURON_1, activation='relu')(x)
-	x = tf.keras.layers.Dense(_NEURON_2, activation='relu')(x)
-	outputs = tf.keras.layers.Dense(_NEURON_3, activation='softmax')(x)
-	model[sk_i] = tf.keras.Model(inputs=inputs, outputs=outputs)
-	print(model[sk_i].summary())
-	start = time.time()
-	model[sk_i].compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-	model[sk_i].fit(_DATA_TRAIN_X, _DATA_TRAIN_Y, validation_split=0.3, epochs=_EPOCHS)
-	end = time.time()
-	print(' tiempo de training transcurrido (segundos) =', end - start)
+	entrenar = not os.path.exists('test.h5')
+	if entrenar:
+		grupos_de_categorias = dividir_array_categorias(_DATA_TRAIN_Y, 10, 3)
+		combinacion_arrays = combinar_arrays(grupos_de_categorias)[sk_i]
+		_DATA_TRAIN_X = _DATA_TRAIN_X[np.isin(_DATA_TRAIN_Y, combinacion_arrays)]
+		_DATA_TRAIN_Y = _DATA_TRAIN_Y[np.isin(_DATA_TRAIN_Y, combinacion_arrays)]
+		print('======================================')
+		print('Skynnet Info: Longitud de los datos de la subred (datos,etiquetas):', len(_DATA_TRAIN_X), len(_DATA_TRAIN_Y))
+		print('Skynnet Info: Categorias de esta subred', np.unique(_DATA_TRAIN_Y))
+		print('======================================')
+		categorias_incluir = np.unique(_DATA_TRAIN_Y)
+		etiquetas_consecutivas = np.arange(len(categorias_incluir))
+		_DATA_TRAIN_Y = np.searchsorted(categorias_incluir, _DATA_TRAIN_Y)
+		_NEURON_3 = len(np.unique(_DATA_TRAIN_Y))
+		inputs = tf.keras.Input(shape=(28, 28))
+		x = tf.keras.layers.Flatten()(inputs)
+		x = tf.keras.layers.Dense(_NEURON_1, activation='relu')(x)
+		x = tf.keras.layers.Dense(_NEURON_2, activation='relu')(x)
+		outputs = tf.keras.layers.Dense(_NEURON_3, activation='softmax')(x)
+		model[sk_i] = tf.keras.Model(inputs=inputs, outputs=outputs)
+		print(model[sk_i].summary())
+		model[sk_i].compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+		start = time.time()
+		model[sk_i].fit(_DATA_TRAIN_X, _DATA_TRAIN_Y, validation_split=0.3, epochs=_EPOCHS)
+		end = time.time()
+		print(' tiempo de training transcurrido (segundos) =', end - start)
+	else:
+		model[sk_i] = tf.keras.models.load_model('test.h5')
+		start = time.time()
+		model[sk_i].fit(_DATA_TRAIN_X, _DATA_TRAIN_Y, validation_split=0.3, epochs=_EPOCHS)
+		end = time.time()
+	model[sk_i].save('test.h5')
 	to_predict_models.append(sk_i)
 #__CLOUDBOOK:PARALLEL__
 def skynnet_prediction_0():
@@ -144,8 +152,7 @@ def skynnet_prediction_0():
 
 #SKYNNET:END
 
-def main():
-	pass
+
 
 #__CLOUDBOOK:DU0__
 def skynnet_train_global_0():
@@ -189,14 +196,10 @@ def skynnet_prediction_global_0():
 
 
 #__CLOUDBOOK:MAIN__
-def sk_main():
+def main():
 	skynnet_train_global_0()
 	skynnet_prediction_global_0()
 
 if __name__ == '__main__':
-	try:
-		main(*args, **kwargs)
-	except:
-		pass
-	sk_main()
+	main()
 

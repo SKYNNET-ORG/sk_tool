@@ -51,3 +51,5 @@ predicted = model.predict(_DATA_TEST_X)
 
 #SKYNNET:END
 
+def main():
+    pass

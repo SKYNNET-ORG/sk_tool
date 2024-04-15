@@ -165,7 +165,7 @@ def skynnet_prediction_global_0():
 	mse = tf.keras.losses.MeanSquaredError()
 	mse_orig = mse(_DATA_TEST_Y, reconstructed_img).numpy()
 	print('============================================')
-	print('Skynnet Info: La loss compuesta es: ', mse_orig)
+	print('Skynnet Info: La loss compuesta es (mse): ', mse_orig)
 	print('============================================')
 	n = 20
 	plt.figure(figsize=(20, 4))
@@ -186,10 +186,14 @@ def skynnet_prediction_global_0():
 
 
 #__CLOUDBOOK:MAIN__
-def main():
+def sk_main():
 	skynnet_train_global_0()
 	skynnet_prediction_global_0()
 
 if __name__ == '__main__':
-	main()
+	try:
+		main(*args, **kwargs)
+	except:
+		pass
+	sk_main()
 

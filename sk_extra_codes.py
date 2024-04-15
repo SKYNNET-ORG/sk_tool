@@ -53,6 +53,12 @@ def combinar_arrays(arrays):
     return arrays_combinados
 '''
 
+optional_main = '''try:
+    main(*args,**kwargs)
+except:
+    pass
+'''
+
 def division_datos_fit_multiclass(categorias,grupos,datos_x,datos_y,last_neuron):
     division_datos = f'''grupos_de_categorias = dividir_array_categorias({datos_y},{categorias},{grupos})
 combinacion_arrays = combinar_arrays(grupos_de_categorias)[sk_i]
@@ -227,11 +233,18 @@ for i in range(0, p1.shape[0]):
 '''
 
     codigo_loss_compuesta = f'''
-scce = tf.keras.losses.SparseCategoricalCrossentropy()
-scce_orig=scce(_DATA_TEST_Y, {nombre_predict}).numpy()
-print('============================================')
-print('Skynnet Info: La loss compuesta es: ', scce_orig)
-print('============================================')
+if (_DATA_TEST_Y[0].shape!=()):#La salida tiene mas de una dimension
+    cce = tf.keras.losses.CategoricalCrossentropy()
+    cce_orig=cce(_DATA_TEST_Y, {nombre_predict}).numpy()
+    print('============================================')
+    print('Skynnet Info: La loss compuesta es (cce): ', cce_orig)
+    print('============================================')
+else:
+    scce = tf.keras.losses.SparseCategoricalCrossentropy()
+    scce_orig=scce(_DATA_TEST_Y, {nombre_predict}).numpy()
+    print('============================================')
+    print('Skynnet Info: La loss compuesta es (scce): ', scce_orig)
+    print('============================================')
 '''
     prediccion_loss_regresion = f'''
 global predictions_{block_number}
@@ -242,7 +255,7 @@ predictions_{block_number} = dict(sorted(predictions_{block_number}.items(), key
 mse = tf.keras.losses.MeanSquaredError()
 mse_orig=mse(_DATA_TEST_Y, {nombre_predict}).numpy()
 print('============================================')
-print('Skynnet Info: La loss compuesta es: ', mse_orig)
+print('Skynnet Info: La loss compuesta es (mse): ', mse_orig)
 print('============================================')
 '''
     codigo_loss_compuesta_bin = f'''

@@ -170,6 +170,7 @@ class VisitModelFunctions(ast.NodeVisitor):
         #nodo valido, si node.func es un atributo (de model)
         #y esta en la lista de funciones que queremos para skynnet
         if isinstance(node.func, ast.Attribute) and node.func.attr in sk_functions_list:
+            #print(self.dict_modelo)
             if isinstance(node.func.value, ast.Name) and node.func.value.id == self.dict_modelo['name']:#.keys():
                 #self.dict_modelo[node.func.value.id][node.func.attr] = node
                 self.dict_modelo[node.func.attr] = node
@@ -288,13 +289,15 @@ class GetModelDataVars(ast.NodeVisitor):
         self.dict_modelo["data_test"] = []
 
     def visit_Assign(self,node):
-
-        if len(node.targets)==1 and node.targets[0].id in self.data_vars_train:
-            self.dict_modelo["data_train"].append(node)
-        if len(node.targets)==1 and node.targets[0].id in self.data_vars_val:
-            self.dict_modelo["data_val"].append(node)
-        if len(node.targets)==1 and node.targets[0].id in self.data_vars_test:
-            self.dict_modelo["data_test"].append(node)
+        try:
+            if len(node.targets)==1 and node.targets[0].id in self.data_vars_train:
+                self.dict_modelo["data_train"].append(node)
+            if len(node.targets)==1 and node.targets[0].id in self.data_vars_val:
+                self.dict_modelo["data_val"].append(node)
+            if len(node.targets)==1 and node.targets[0].id in self.data_vars_test:
+                self.dict_modelo["data_test"].append(node)
+        except:
+            pass
 
 # Clase de visitante para buscar definiciones de función y agregar nonlocal
 class NonlocalAdder(ast.NodeTransformer):
@@ -961,7 +964,7 @@ def write_sk_global_code(number_of_sk_functions,fo):
     fo.write("\n")
     #funcion
     main_def = FunctionDef(
-        name="main",
+        name="sk_main",
         args=arguments(args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
         body=[],#Expr(value=call) for call in func_calls],
         decorator_list=[],
@@ -973,12 +976,17 @@ def write_sk_global_code(number_of_sk_functions,fo):
     fix_missing_locations(main_def)
     fo.write(unparse(main_def))
     fo.write('\n\n')
+
+    #Permito un main especial del usuario en un bloque try,except
+    opt_main = fix_missing_locations(parse(sk_extra_codes.optional_main))
+
+
     # Creamos un bloque if __name__ == "__main__" que contiene todas las llamadas a función generadas
     # Creamos una llamada a la función main()
-    main_call = Call(func=Name(id="main", ctx=Load()), args=[], keywords=[])
+    main_call = Call(func=Name(id="sk_main", ctx=Load()), args=[], keywords=[])
     main_block = If(
         test=Compare(left=Name("__name__", Load()), ops=[Eq()], comparators=[Str("__main__")]),
-        body=[Expr(value=main_call)],
+        body=[opt_main,Expr(value=main_call)],
         orelse=[]
     )
     fix_missing_locations(main_block)

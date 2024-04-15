@@ -244,18 +244,30 @@ def skynnet_prediction_global_0():
 	print('============================================')
 	print('Skynnet Info: La accuracy de la prediccion compuesta es: ', precision_compuesta)
 	print('============================================')
-	scce = tf.keras.losses.SparseCategoricalCrossentropy()
-	scce_orig = scce(_DATA_TEST_Y, predicted).numpy()
-	print('============================================')
-	print('Skynnet Info: La loss compuesta es: ', scce_orig)
-	print('============================================')
+	if _DATA_TEST_Y[0].shape != ():
+		#La salida tiene mas de una dimension
+		cce = tf.keras.losses.CategoricalCrossentropy()
+		cce_orig = cce(_DATA_TEST_Y, predicted).numpy()
+		print('============================================')
+		print('Skynnet Info: La loss compuesta es (cce): ', cce_orig)
+		print('============================================')
+	else:
+		scce = tf.keras.losses.SparseCategoricalCrossentropy()
+		scce_orig = scce(_DATA_TEST_Y, predicted).numpy()
+		print('============================================')
+		print('Skynnet Info: La loss compuesta es (scce): ', scce_orig)
+		print('============================================')
 
 
 #__CLOUDBOOK:MAIN__
-def main():
+def sk_main():
 	skynnet_train_global_0()
 	skynnet_prediction_global_0()
 
 if __name__ == '__main__':
-	main()
+	try:
+		main(*args, **kwargs)
+	except:
+		pass
+	sk_main()
 
