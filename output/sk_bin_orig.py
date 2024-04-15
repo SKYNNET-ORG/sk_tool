@@ -198,13 +198,13 @@ def skynnet_prediction_global_0():
 
 #__CLOUDBOOK:MAIN__
 def sk_main():
+	try:
+		main()
+	except:
+		pass
 	skynnet_train_global_0()
 	skynnet_prediction_global_0()
 
 if __name__ == '__main__':
-	try:
-		main(*args, **kwargs)
-	except:
-		pass
 	sk_main()
 

@@ -15,7 +15,7 @@ y_test = mnist.load_data()[1][1]
 x_train = x_train / 255.0
 x_test =  x_test / 255.0
 
-
+entrenar = True
 #SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
 
 #__CLOUDBOOK:LOCAL__
@@ -85,8 +85,7 @@ def skynnet_train_0(sk_i):
 	_NEURON_1 = 86
 	_NEURON_2 = 40
 	_NEURON_3 = 7
-	_EPOCHS = 7
-	entrenar = not os.path.exists('test.h5')
+	_EPOCHS = 2
 	if entrenar:
 		grupos_de_categorias = dividir_array_categorias(_DATA_TRAIN_Y, 10, 3)
 		combinacion_arrays = combinar_arrays(grupos_de_categorias)[sk_i]
@@ -111,13 +110,12 @@ def skynnet_train_0(sk_i):
 		start = time.time()
 		model[sk_i].fit(_DATA_TRAIN_X, _DATA_TRAIN_Y, validation_split=0.3, epochs=_EPOCHS)
 		end = time.time()
+		model[sk_i].save(
+		'test' + str(sk_i) + '.h5')
 		print(' tiempo de training transcurrido (segundos) =', end - start)
 	else:
-		model[sk_i] = tf.keras.models.load_model('test.h5')
-		start = time.time()
-		model[sk_i].fit(_DATA_TRAIN_X, _DATA_TRAIN_Y, validation_split=0.3, epochs=_EPOCHS)
-		end = time.time()
-	model[sk_i].save('test.h5')
+		model[sk_i] = tf.keras.models.load_model(
+		'test' + str(sk_i) + '.h5')
 	to_predict_models.append(sk_i)
 #__CLOUDBOOK:PARALLEL__
 def skynnet_prediction_0():
@@ -152,7 +150,13 @@ def skynnet_prediction_0():
 
 #SKYNNET:END
 
-
+def main():
+	global entrenar
+	respuesta = input("¿Quieres entrenar? [y/n]").strip().lower()
+	if respuesta == 'n':
+		entrenar = False
+	else:
+		entrenar = True
 
 #__CLOUDBOOK:DU0__
 def skynnet_train_global_0():
@@ -196,10 +200,14 @@ def skynnet_prediction_global_0():
 
 
 #__CLOUDBOOK:MAIN__
-def main():
+def sk_main():
+	try:
+		main()
+	except:
+		pass
 	skynnet_train_global_0()
 	skynnet_prediction_global_0()
 
 if __name__ == '__main__':
-	main()
+	sk_main()
 

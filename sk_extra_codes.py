@@ -54,7 +54,7 @@ def combinar_arrays(arrays):
 '''
 
 optional_main = '''try:
-    main(*args,**kwargs)
+    main()
 except:
     pass
 '''

@@ -325,6 +325,40 @@ class NonlocalAdder(ast.NodeTransformer):
         self.generic_visit(node)
         return node
 
+#Clase para cambiar los load y saves
+class ModifyPaths(ast.NodeTransformer):
+
+    def __init__(self,dict_modelo):
+        self.dict_modelo = dict_modelo
+
+    '''def visit_Assign(seld,node):
+        if isinstance(node.value,ast.Call):
+            llamada=node.value
+            if isinstance(llamada.func, ast.Attribute) and hasattr(llamada.func,'value'):
+                if isinstance(llamada.func.value, ast.Name):
+                    if (llamada.func.value.id == "tf") and (llamada.func.attr == "keras"):
+                        print("HOLA")'''
+
+    def visit_Call(self, node):
+        # Comprueba si es una llamada a `save` o `load`
+        if isinstance(node.func, ast.Attribute) and hasattr(node.func,'value'):
+            if isinstance(node.func.value, ast.Name):
+                if (node.func.value.id == self.dict_modelo['name']):
+                    if node.func.attr == "save":
+                        #Insertamos antes del h5 el indice
+                        parts = node.args[0].s.split('.')#separo la ruta por el punto
+                        #node.args[0] = parse(f"'{parts[0]}'+str(sk_i)+'.{parts[1]}'")
+                        new_args = parse(f"'{parts[0]}'+str(sk_i)+'.{parts[1]}'")
+                        node.args = [new_args]
+                        fix_missing_locations(node)
+        if isinstance(node.func, ast.Attribute) and hasattr(node.func,'attr'):
+            if node.func.attr == "load_model":
+                parts = node.args[0].s.split('.')#separo la ruta por el punto
+                node.args[0] = parse(f"'{parts[0]}'+str(sk_i)+'.{parts[1]}'")
+                fix_missing_locations(node)            
+        self.generic_visit(node)
+        return node
+
 def get_data_type(tipo_datos):
     if tipo_datos == "train":
         datos_x = "_DATA_TRAIN_X"
@@ -560,6 +594,7 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         post_predict_code = None 
     print(linea_predict)
     '''
+
     #Paso 1 - Se consultan las categorias mirando la ultima capa de tipo _NEURON_
     reduccion = num_subredes # capas=capas/reduccion  datos= datos/reduccion
     visit_categorias = VisitLastNeuron()
@@ -617,6 +652,10 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
     #print(sk_dict)
     #print(f"Paso 4 ======> {sk_dict}")
     
+    #Paso intermedio, modifico los model_load y los save
+    ModifyPaths(sk_dict).visit(node_data_vars_reduced)
+
+
     #Paso 5 - Quito la prediccion del nodo de codigo que tengo hasta ahora
     #Quito la prediccion y la guardo para meterla en una funcion nueva solo de la forma predicted = model.predict()
     predictions =  RemovePredictionNode(sk_dict)
@@ -957,6 +996,8 @@ def write_sk_global_code(number_of_sk_functions,fo):
     func_calls = [Call(func=Name(id=name, ctx=ast.Load()), args=[], keywords=[]) for name in func_names]
     func_pred_calls = [Call(func=Name(id=name, ctx=ast.Load()), args=[], keywords=[]) for name in func_pred_names]
 
+    #Permito un main especial del usuario en un bloque try,except
+    opt_main = fix_missing_locations(parse(sk_extra_codes.optional_main))
     
     #Hacemos una funcion cloudbook main, primero la etiqueta y luego la funcion
     comment_main = Comment(value = "#__CLOUDBOOK:MAIN__")
@@ -966,7 +1007,7 @@ def write_sk_global_code(number_of_sk_functions,fo):
     main_def = FunctionDef(
         name="sk_main",
         args=arguments(args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[], posonlyargs=[]),
-        body=[],#Expr(value=call) for call in func_calls],
+        body=[opt_main],#Expr(value=call) for call in func_calls],
         decorator_list=[],
         returns=None,
     )
@@ -977,16 +1018,13 @@ def write_sk_global_code(number_of_sk_functions,fo):
     fo.write(unparse(main_def))
     fo.write('\n\n')
 
-    #Permito un main especial del usuario en un bloque try,except
-    opt_main = fix_missing_locations(parse(sk_extra_codes.optional_main))
-
 
     # Creamos un bloque if __name__ == "__main__" que contiene todas las llamadas a función generadas
     # Creamos una llamada a la función main()
     main_call = Call(func=Name(id="sk_main", ctx=Load()), args=[], keywords=[])
     main_block = If(
         test=Compare(left=Name("__name__", Load()), ops=[Eq()], comparators=[Str("__main__")]),
-        body=[opt_main,Expr(value=main_call)],
+        body=[Expr(value=main_call)],
         orelse=[]
     )
     fix_missing_locations(main_block)
