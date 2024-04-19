@@ -1,22 +1,29 @@
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 import tensorflow as tf
 #from tensorflow import keras
 import numpy as np
 import matplotlib.pyplot as plt
 import time
 
+
+
 # cargamos los datos de entrenamiento
-(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+#(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+#__CLOUDBOOK:NONSHARED__
+loaded_dataset = tf.keras.datasets.mnist.load_data()
+x_train = loaded_dataset[0][0]
+y_train = loaded_dataset[0][1]
+x_test = loaded_dataset[1][0]
+y_test = loaded_dataset[1][1]
 #normalizamos a 0..1
 x_train = x_train.astype('float32') / 255
 x_test = x_test.astype('float32') / 255
 
-# We will make a test set of 10 samples and use the other 9990 as validation data.
-# esto quita los ultimos 10 elementos (se queda con 0..9990)
-x_validate, y_validate = x_test[:-10], y_test[:-10]
+x_validate = x_test[:-10]
+y_validate = y_test[:-10]
 # esto coge los 10 ultimos (se queda con 9990..9999)
-x_test, y_test = x_test[-10:], y_test[-10:]
+x_test = x_test[-10:]
+y_test =  y_test[-10:]
 
 
 #SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
@@ -144,9 +151,9 @@ def skynnet_prediction_0():
 		label = __CLOUDBOOK__['agent']['id'] + ('_' + str(sk_i))
 		grupos_de_categorias = dividir_array_categorias(_DATA_TEST_Y, 10, 3)
 		categorias_incluir = combinar_arrays(grupos_de_categorias)[sk_i]
-		label += f'{categorias_incluir}'
+		aux = f'{categorias_incluir}'
 		predicted = model[sk_i].predict(_DATA_TEST_X, verbose=1)
-		categorias_str = label[label.find('[') + 1:label.find(']')]
+		categorias_str = aux[aux.find('[') + 1:aux.find(']')]
 		categorias = np.fromstring(categorias_str, dtype=int, sep=' ')
 		resul = []
 		for (i, pred) in enumerate(predicted):
@@ -158,6 +165,9 @@ def skynnet_prediction_0():
 
 
 #SKYNNET:END
+
+def main():
+	pass
 
 #__CLOUDBOOK:DU0__
 def skynnet_train_global_0():

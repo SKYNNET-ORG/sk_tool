@@ -54,3 +54,6 @@ print (" original: tiempo transcurrido (segundos) =", (end-start))
 predicted = model.predict(_DATA_TEST_X)
 
 #SKYNNET:END
+
+def main():
+    pass

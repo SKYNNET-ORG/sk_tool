@@ -103,9 +103,9 @@ def preparacion_datos_predict_multiclass(medida_compuesta,predict_name,model_nam
 
     preparacion_datos = f'''grupos_de_categorias = dividir_array_categorias({datos_y},{categorias},{grupos})
 categorias_incluir = combinar_arrays(grupos_de_categorias)[sk_i]
-label+=f"'''+"{categorias_incluir}"+'''"
+aux=f"'''+"{categorias_incluir}"+'''"
 '''+f"{predict_name}"+''' = '''+f"{model_name}"+'''[sk_i].predict(_DATA_TEST_X, verbose=1)
-categorias_str = label[label.find("[")+1:label.find("]")]
+categorias_str = aux[aux.find("[")+1:aux.find("]")]
 categorias = np.fromstring(categorias_str, dtype=int,sep=' ')
 resul = []
 for i,pred in enumerate('''+f"{predict_name}"+'''):

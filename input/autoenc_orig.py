@@ -91,3 +91,6 @@ print("Todo terminado")
 print("Adios")
 
 #SKYNNET:END
+
+def main():
+    pass

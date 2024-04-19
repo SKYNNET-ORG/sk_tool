@@ -6,8 +6,14 @@ from tensorflow import keras
 import numpy as np
 import time
 
-#load data
-(x_train, y_train) , (x_test, y_test) = keras.datasets.mnist.load_data()
+
+#__CLOUDBOOK:NONSHARED__
+loaded_dataset = keras.datasets.mnist.load_data()
+x_train = loaded_dataset[0][0]
+y_train = loaded_dataset[0][1]
+x_test = loaded_dataset[1][0]
+y_test = loaded_dataset[1][1]
+#(x_train, y_train) , (x_test, y_test) = keras.datasets.mnist.load_data()
 x_train = x_train / 255
 x_test = x_test / 255
 
@@ -60,3 +66,6 @@ print (" tiempo de training transcurrido (segundos) =", (end-start))
 
 predicted = cnn_orig.predict(_DATA_TEST_X)
 #SKYNNET:END
+
+def main():
+    pass

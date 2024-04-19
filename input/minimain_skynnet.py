@@ -3,6 +3,10 @@ import os
 import time
 import sys
 
+import glob
+import shutil
+import os
+
 # modulos de la app
 import dataTrainGen
 import trainer
@@ -16,13 +20,27 @@ from pathlib import Path
 import re
 
 import keras
-print(keras.__version__)
+
+#__CLOUDBOOK:GLOBAL__
+dir_profile = ""
+ENTRENAR = False
+CREAR_MODELO = False
+CARGAR_MODELO = False
+#__CLOUDBOOK:NONSHARED__
+debuglevel = 4
+data = None
+data_np = None
+dir_profile = ""
+brute_file_list = []
+retouched_file_list = []
+
 
 
 ########################################################################################
 # define a function for vertically
 # concatenating images of different
 # widths
+#__CLOUDBOOK:LOCAL__
 def vconcat_resize(img_list, interpolation=cv2.INTER_CUBIC):
     # take minimum width
     w_min = min(img.shape[1] for img in img_list)
@@ -35,6 +53,7 @@ def vconcat_resize(img_list, interpolation=cv2.INTER_CUBIC):
 
 
 ########################################################################################
+#__CLOUDBOOK:LOCAL__
 def hconcat_resize(img_list, interpolation=cv2.INTER_CUBIC):
     # take minimum hights
     h_min = min(img.shape[0] for img in img_list)
@@ -47,6 +66,7 @@ def hconcat_resize(img_list, interpolation=cv2.INTER_CUBIC):
 
 
 ########################################################################################
+#__CLOUDBOOK:LOCAL__
 def concat_tile_resize(list_2d, interpolation=cv2.INTER_CUBIC):
     # function calling for every
     # list of images
@@ -55,6 +75,7 @@ def concat_tile_resize(list_2d, interpolation=cv2.INTER_CUBIC):
     return vconcat_resize(img_list_v, interpolation=cv2.INTER_CUBIC)
 
 #######################################################################
+#__CLOUDBOOK:LOCAL__
 def gen_data_input_listbulk(dir_bruto, brute_file_list,retouched_file_list, profiledir, debuglevel, CRIBADAS=False):
     """
 
@@ -121,58 +142,148 @@ def gen_data_input_listbulk(dir_bruto, brute_file_list,retouched_file_list, prof
 #                    PROGRAMA MAIN
 ########################################################################################
 
+#__CLOUDBOOK:DU0__
+def main():
+    if hasattr(main,'executed'):
+        return
+    else:
+        setattr(main,'executed',True)
+    global dir_profile
+    global ENTRENAR
+    global CREAR_MODELO
+    global CARGAR_MODELO
 
-ENTRENAR = True
+    sk_local_main_executed = True
 
-# variables globales
-# ------------------
-dir_profile = "./mini"
 
-dir_bruto = "mini/bruto/"
-dir_retouch = "mini/trans/"
+    perfil = input("Que perfil quieres usar? ")
+    dir_aux = "./"+perfil
+    dir_profile = dir_aux
+     
+    # Crear el directorio si no existe
+    if not os.path.exists(dir_profile):
+        os.mkdir(dir_profile)
+        print(f"Directorio '{dir_profile}' creado exitosamente.")
+        #os.chdir(dir_profile)
+        #print(f"La ubicación ahora es: {os.getcwd()}")
+    #else:
+        #os.chdir(dir_profile)
+        #print(f"La ubicación ahora es: {os.getcwd()}")
 
-# ===================================COMIENZA MAIN =====================================
-# obtencion de lista de fotos sin cribar
-# --------------------------------------
-brute_file_list = os.listdir(dir_bruto)
-retouched_file_list = os.listdir(dir_retouch)
+    # Preguntar qué quiere hacer
+    print("====App fotografica=====")
+    print("\n¿Qué quieres hacer?")
+    print("1. Crear modelo y entrenar")
+    print("2. Cargar modelo y reentrenar")
+    print("3. Cargar modelo y predecir")
+     
+    opcion = input("Selecciona una opción (1/2/3): ")
+    if opcion == "1":
+        CREAR_MODELO = True
+        CARGAR_MODELO = False
+        ENTRENAR = True
+    elif opcion == "2":
+        CREAR_MODELO = False
+        CARGAR_MODELO = True
+        ENTRENAR = True
+    elif opcion == "3":
+        CREAR_MODELO = False
+        CARGAR_MODELO = True
+        ENTRENAR = False
+    else:
+        print("Opción no válida. Por favor, selecciona 1, 2 o 3.")
+    load_data()
 
-total_fotos = len(brute_file_list)
-print("total fotos en bruto:", total_fotos)
+#__CLOUDBOOK:LOCAL__
+def load_data():
+    global ENTRENAR
+    global CREAR_MODELO
+    global CARGAR_MODELO
+    global dir_profile
+    global data
+    global data_np
+    
+    global brute_file_list
+    global retouched_file_list
+     
+    # variables globales
+    # ------------------
+    # dir_profile = "./mini"
+    
+    dir_bruto = "./bruto"#os.path.join(dir_profile, "bruto")
+    dir_retouch = "./trans"#os.path.join(dir_profile, "trans")
 
-# cribado
-# ---------
-start = time.time()
-print("cribando fotos para entrenar en dir bruto=", dir_bruto)
-unique_list, brute_file_list, retouched_file_list = cribado.compare_folders(dir_bruto, dir_retouch)
-brute_file_list, retouched_file_list = cribado.criba(unique_list, brute_file_list, retouched_file_list, dir_profile)
-print("cribando terminado")
+     
+    
+    # ===================================COMIENZA MAIN =====================================
+    # obtencion de lista de fotos sin cribar
+    # --------------------------------------
+    brute_file_list = os.listdir(dir_bruto)
+    retouched_file_list = os.listdir(dir_retouch)
 
-end = time.time()
-criba_time = end - start
-print(" criba: tiempo transcurrido (segundos) =", criba_time)
+    total_fotos = len(brute_file_list)
+    print("total fotos en bruto:", total_fotos)
 
-# generacion de datos de entrenamiento
-# --------------------------------------
-total_fotos_cribadas = len(brute_file_list)
-start = time.time()
-if (ENTRENAR):
-    res, data = dataTrainGen.dataGen(brute_file_list, retouched_file_list)  # genera data para entrenar
-else:
-    res, data = (0, 0)  # caso de no entrenar
-end = time.time()
-data_gen_time = end - start
-print(" datagen: tiempo transcurrido (segundos) =", data_gen_time)
-if (res != 0):
-    sys.exit()
+    # cribado
+    # ---------
+    start = time.time()
+    print("cribando fotos para entrenar en dir bruto=", dir_bruto)
+    unique_list, brute_file_list, retouched_file_list = cribado.compare_folders(dir_bruto, dir_retouch)
+    brute_file_list, retouched_file_list = cribado.criba(unique_list, brute_file_list, retouched_file_list, dir_profile)
+    print("cribando terminado")
 
-print("dataTrainGen.dataGen:", res)
+    end = time.time()
+    criba_time = end - start
+    print(" criba: tiempo transcurrido (segundos) =", criba_time)
 
-debuglevel = 4
-data_np,brute_file_list,retouched_file_list = gen_data_input_listbulk(dir_bruto, brute_file_list,retouched_file_list, dir_profile, debuglevel, CRIBADAS=False)
-# creacion y entrenamiento del modelo
-# -------------------------------------
+    # generacion de datos de entrenamiento
+    # --------------------------------------
+    total_fotos_cribadas = len(brute_file_list)
+    start = time.time()
+    if (ENTRENAR):
+        res, data = dataTrainGen.dataGen(brute_file_list, retouched_file_list)  # genera data para entrenar
+    else:
+        res, data = (0, [0,0])  # caso de no entrenar
+    end = time.time()
+    data_gen_time = end - start
+    print(" datagen: tiempo transcurrido (segundos) =", data_gen_time)
+    if (res != 0):
+        sys.exit()
+
+    print("dataTrainGen.dataGen:", res)
+
+    data_np,brute_file_list,retouched_file_list = gen_data_input_listbulk(dir_bruto, brute_file_list,retouched_file_list, dir_profile, debuglevel, CRIBADAS=False)
+
+
+main()
+
+def refresh_ENTRENAR():
+    global ENTRENAR
+    return ENTRENAR
+
+def refresh_CREAR_MODELO():
+    global CREAR_MODELO
+    return CREAR_MODELO
+
+def refresh_CARGAR_MODELO():
+    global CARGAR_MODELO
+    return CARGAR_MODELO
+
+def refresh_dir_profile():
+    global dir_profile
+    return dir_profile
+
+def refresh_flag():
+    global flag
+    return flag
+
 #SKYNNET:BEGIN_REGRESSION
+
+entrenar = refresh_ENTRENAR()
+crear_modelo = refresh_CREAR_MODELO()
+cargar_modelo = refresh_CARGAR_MODELO()
+dir_profile = refresh_dir_profile()
+load_data()
 data_0 = data[0]
 data_1 = data[1]
 _DATA_TRAIN_X = data_0
@@ -181,48 +292,46 @@ _DATA_TEST_X = data_np
 _NEURON_1 = 774
 _NEURON_2 = 1548
 _NEURON_3 = 1536
-start = time.time()
-ENTRENAR = True
-if (ENTRENAR):
-    #res = trainer.trainProfile(dir_profile, data)  # esto genera el modelo h5
-    ################################################################################################
-    # hacer comprobación de si existe el modelo previamente
-    # model = libaux.loadModel(profiledir)
-    cad = dir_profile + "/" + "model.h5"
 
-    print("El modelo no existe.")
+epocas = 0
+if cargar_modelo:
+    model = tf.keras.models.load_model('model.h5')
+
+if (entrenar):
     ############################################################################################
-    dim = 256 * 3 + 6  # 4
-    # dim = 64
     input_data = tf.keras.layers.Input(shape=(256 * 3 + 6,))  # antes 4
     encoded = tf.keras.layers.Dense(_NEURON_1, activation='relu6')(input_data)
     encoded = tf.keras.layers.Dense(_NEURON_2, activation='relu')(encoded)  # mejor que selu
     decoded = tf.keras.layers.Dense(_NEURON_3, activation='softplus')(encoded)
-    model = tf.keras.models.Model(input_data, decoded)
-    model.compile(optimizer='adam', loss='mse')
-    model_created_now = 1
-    print("Modelo creado.")
-    ############################################################################################
-    # para usar menos epocas
-    #inputs = data[0]
-    #desired_output = data[1]
-    if(model_created_now == 1):
+    if crear_modelo:
+        model = tf.keras.models.Model(input_data, decoded)
+        model.compile(optimizer='adam', loss='mse')
+        print("Modelo creado.")
         epocas = 200
     else:
         epocas = 25
+
     # log_train = trainModel(model, (inputs, desired_output), epocas)
+    start = time.time()
     trained_model = model.fit(_DATA_TRAIN_X, _DATA_TRAIN_Y, epochs=epocas, batch_size=4)
+    end = time.time()   
+    train_time = end - start
+    print(" train: tiempo transcurrido (segundos) =", train_time)
     # salva el modelo en el directorio de profile
     # libaux.saveModel(model, profiledir)
-    model.save(dir_profile + '\\model.h5')
+    model.save('model.h5')            
+    
     ################################################################################################
 
-end = time.time()
-train_time = end - start
-print(" train: tiempo transcurrido (segundos) =", train_time)
-print("")
 
+print("")
 g=model.predict(_DATA_TEST_X)
+
+dir_profile2 = refresh_dir_profile()
+dir_profile = dir_profile2
+print("Prediction done")
+print(brute_file_list)
+print(dir_profile)
 #print(f"shape de data_np= {data_np.shape}, de data_test={_DATA_TEST_X.shape}")
 #g=model.predict(data_np)
 CRIBADAS=False
@@ -328,122 +437,24 @@ for file_1 in brute_file_list:
                                      [hist1,hist2, hist3] ])
         print("salvando ", file_rna)
         cv2.imwrite(file_rna,img_h2)
-        
-        
-    
-    index=index+1   
+
+       
+
+        # Ruta de la carpeta de origen
+        ruta_origen = '.'
+
+        # Ruta de la carpeta de destino
+        ruta_destino = dir_profile
+
+        # Obtener la lista de archivos .h5 en la carpeta de origen
+        archivos_h5 = glob.glob(os.path.join(ruta_origen, '*.h5'))
+
+        # Copiar cada archivo .h5 a la carpeta de destino
+        for archivo in archivos_h5:
+            shutil.copy(archivo, ruta_destino)
+
+
 
 #SKYNNET:END
 
 #==============================================================
-
-
-    
-
-
-
-
-
-
-
-
-
-
-# ejecucion de prueba del modelo entrenado
-# ------------------------------------------
-'''debuglevel = 4
-# 0= la foto retocada y reducida 50%
-# 1= foto orig + RNA  reducidas al 25%
-# 2= foto orig + fotografo +RNA  reducidas al 25%
-# 3= esta opcion no existe
-# 4= foto orig + fotografo +RNA  + 3 histogramas reducidas al 25%
-
-start = time.time()
-# esta funcion retoca las fotos que esten en la lista brute_file_list, la cual no contiene cribadas.
-res = tester.testRetouch_list(dir_bruto, brute_file_list, retouched_file_list, dir_profile, debuglevel, False)
-end = time.time()
-
-print("Ahora hacemos las cribadas...")
-print("------------------------------")
-
-# ahora hacemos las cribadas
-# --------------------------
-set_bruto_cribada = set(brute_file_list)
-set_retouched_cribada = set(retouched_file_list)
-
-brute_full_list = os.listdir(dir_bruto)
-retouched_full_list = os.listdir(dir_retouch)
-
-# concatenamos los directorios
-for indice in range(len(brute_full_list)):
-    brute_full_list[indice] = dir_bruto + brute_full_list[indice]
-    retouched_full_list[indice] = dir_retouch + retouched_full_list[indice]
-
-set_brute_full = set(brute_full_list)
-set_retouched_full = set(retouched_full_list)
-
-set_brute_dif = set_brute_full - set_bruto_cribada  # set_bruto_cribada es la lista cribada (no las cribadas)
-set_retouched_dif = set_retouched_full - set_retouched_cribada
-
-list_bruto_cribadas = list(set_brute_dif)
-list_retouched_cribadas = list(set_retouched_dif)
-
-# aqui falta quitar de retouched las que no esten en list bruto
-# ------------------------------------------------------
-lista_cribadas = []
-lista_cribadas_retouch = []
-for i in list_bruto_cribadas:
-    for j in list_retouched_cribadas:
-        if (dataTrainGen.checkCoherence(i, j) == 0):
-            lista_cribadas.append(i)
-            lista_cribadas_retouch.append(j)
-
-list_bruto_cribadas = lista_cribadas
-list_retouched_cribadas = lista_cribadas_retouch
-# ------------------------------------------------------
-
-list_bruto_cribadas.sort()
-list_retouched_cribadas.sort()
-print("-----------BRUTO CRIBADAS")
-print(list_bruto_cribadas)
-
-print("-------------RETOUCH CRIBADAS")
-print(list_retouched_cribadas)
-print()
-
-# ejecucion de prueba del modelo entrenado con fotos cribadas
-# -------------------------------------------------------------
-res = tester.testRetouch_list(dir_bruto, list_bruto_cribadas, list_retouched_cribadas, dir_profile, debuglevel, True)
-
-test_time = end - start
-print(" test: tiempo transcurrido (segundos) =", test_time)
-print("tester.testRetouch:", res)
-
-
-# reporte de estadisticas
-# -------------------------------------------------------------
-print("====================================")
-print("    PERFORMANCE SUMMARY:         ")
-print("===================================")
-print("Fase de criba : ")
-print("  -tiempo cribado : ", criba_time)
-print("  -total fotos: ", total_fotos)
-print("  -tiempocriba por foto: ", criba_time / total_fotos)
-print("------------------------------------")
-print("Fase de data generation : ")
-print("  -tiempo data gen : ", data_gen_time)
-print("  -total fotos: ", total_fotos_cribadas)
-print("  -tiempo datagen por foto: ", data_gen_time / total_fotos_cribadas)
-print("------------------------------------")
-print("Fase de training : ")
-print("  -tiempo training (100 epoch) : ", train_time)
-print("  -total fotos: ", total_fotos_cribadas)
-print("  -tiempo training por foto: ", train_time / total_fotos_cribadas)
-print("  -tiempo training por epoca: ", train_time / 100)
-print("------------------------------------")
-print("Fase de test : ")
-print("  -tiempo test  : ", test_time)
-print("  -total fotos: ", total_fotos_cribadas)
-print("  -tiempo test por foto: ", test_time / total_fotos_cribadas)
-print("------------------------------------")
-'''

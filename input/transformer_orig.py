@@ -41,12 +41,19 @@ class TokenAndPositionEmbedding(layers.Layer):
         x = self.token_emb(x)
         return x + positions
 
+
+#__CLOUDBOOK:NONSHARED__
 # Download and prepare dataset
 vocab_size = 20000  # Only consider the top 20k words
 maxlen = 200  # Only consider the first 200 words of each movie review
-(x_train, y_train), (x_val, y_val) = keras.datasets.imdb.load_data(num_words=vocab_size)
-print(len(x_train), "Training sequences")
-print(len(x_val), "Validation sequences")
+#(x_train, y_train), (x_val, y_val) = keras.datasets.imdb.load_data(num_words=vocab_size)
+
+loaded_dataset = keras.datasets.imdb.load_data(num_words=vocab_size)
+x_train = loaded_dataset[0][0]
+y_train = loaded_dataset[0][1]
+x_val = loaded_dataset[1][0]
+y_val = loaded_dataset[1][1]
+
 x_train = keras.preprocessing.sequence.pad_sequences(x_train, maxlen=maxlen)
 x_val = keras.preprocessing.sequence.pad_sequences(x_val, maxlen=maxlen)
 
@@ -110,3 +117,6 @@ end=time.time()
 print (" original: tiempo transcurrido (segundos) =", (end-start))
 predicted = model.predict(_DATA_TEST_X)
 #SKYNNET:END
+
+def main():
+    pass

@@ -1,13 +1,18 @@
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 import tensorflow as tf
 from tensorflow.keras import layers,models
 from tensorflow import keras
 import numpy as np
 import time
 
-#load data
-(x_train, y_train) , (x_test, y_test) = keras.datasets.mnist.load_data()
+
+#__CLOUDBOOK:NONSHARED__
+loaded_dataset = keras.datasets.mnist.load_data()
+x_train = loaded_dataset[0][0]
+y_train = loaded_dataset[0][1]
+x_test = loaded_dataset[1][0]
+y_test = loaded_dataset[1][1]
+#(x_train, y_train) , (x_test, y_test) = keras.datasets.mnist.load_data()
 x_train = x_train / 255
 x_test = x_test / 255
 
@@ -127,9 +132,9 @@ def skynnet_prediction_0():
 		label = __CLOUDBOOK__['agent']['id'] + ('_' + str(sk_i))
 		grupos_de_categorias = dividir_array_categorias(_DATA_TEST_Y, 10, 3)
 		categorias_incluir = combinar_arrays(grupos_de_categorias)[sk_i]
-		label += f'{categorias_incluir}'
+		aux = f'{categorias_incluir}'
 		predicted = cnn_orig[sk_i].predict(_DATA_TEST_X, verbose=1)
-		categorias_str = label[label.find('[') + 1:label.find(']')]
+		categorias_str = aux[aux.find('[') + 1:aux.find(']')]
 		categorias = np.fromstring(categorias_str, dtype=int, sep=' ')
 		resul = []
 		for (i, pred) in enumerate(predicted):
@@ -141,6 +146,9 @@ def skynnet_prediction_0():
 
 
 #SKYNNET:END
+
+def main():
+	pass
 
 #__CLOUDBOOK:DU0__
 def skynnet_train_global_0():

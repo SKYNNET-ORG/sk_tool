@@ -6,17 +6,25 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
+
+
 # cargamos los datos de entrenamiento
-(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+#(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+#__CLOUDBOOK:NONSHARED__
+loaded_dataset = tf.keras.datasets.mnist.load_data()
+x_train = loaded_dataset[0][0]
+y_train = loaded_dataset[0][1]
+x_test = loaded_dataset[1][0]
+y_test = loaded_dataset[1][1]
 #normalizamos a 0..1
 x_train = x_train.astype('float32') / 255
 x_test = x_test.astype('float32') / 255
 
-# We will make a test set of 10 samples and use the other 9990 as validation data.
-# esto quita los ultimos 10 elementos (se queda con 0..9990)
-x_validate, y_validate = x_test[:-10], y_test[:-10]
+x_validate = x_test[:-10]
+y_validate = y_test[:-10]
 # esto coge los 10 ultimos (se queda con 9990..9999)
-x_test, y_test = x_test[-10:], y_test[-10:]
+x_test = x_test[-10:]
+y_test =  y_test[-10:]
 
 
 #SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
@@ -75,3 +83,6 @@ print (" tiempo de training transcurrido (segundos) =", (end-start))
 predicted = model.predict(_DATA_TEST_X)
 
 #SKYNNET:END
+
+def main():
+    pass
