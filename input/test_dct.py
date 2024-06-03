@@ -52,11 +52,14 @@ def concat_tile_resize(list_2d, interpolation=cv2.INTER_CUBIC):
 
 ###########################################################################################################################
 #__CLOUDBOOK:DU0__
-def generaImages():
+def generaImages(predicted):
     global x_train
     global y_train
-    global freq
-    global predicted
+    global x_test
+    global y_test
+    _DATA_TEST_X = x_test
+    _DATA_TEST_Y = y_test
+    
     # crea el directorio de imagenes si no existe
     directorio = "./OUT_images/"
     try:
@@ -64,44 +67,56 @@ def generaImages():
     except os.error:
         os.mkdir(directorio)
         
-    for i in (205,211,107,99): #4 fotos concretas. el nombre tiene un numero aunque la cero es la uno
-        
-        print("input shape:",x_train[i-1].shape) #i-1 porque comienzan numeracion en cero
+    for i in range(0,4): #4 fotos concretas. el nombre tiene un numero aunque la cero es la uno
+        print ("componiendo foto", i) 
+        print("input shape:",_DATA_TEST_X[i-1].shape) #i-1 porque comienzan numeracion en cero
         # ESTA ES LA ORIGINAL
-        orig=cv2.resize(x_train[i-1],(256,256))
-        #file1 = "./OUT_images/orig.jpg" 
+        orig=cv2.resize(_DATA_TEST_X[i-1],(256,256))
+        #cv2.imshow("orig", orig) 
+        #cv2.waitKey(0);
+        #file1 = "./OUT_images/orig.jpg"
+        orig=orig*255
+        #orig = cv2.cvtColor(orig,cv2.COLOR_GRAY2BGR)
         #cv2.imwrite(file1, orig)
-        
+        print ("  orig ok")
         
         #ESTA ES LA Y
-        pruebaY=(y_final2[i-1]-0.5)*100 # fake
+        pruebaY=(_DATA_TEST_Y[i-1]-0.5)*100 # la dct estaba "comprimida"
         prueba3=np.zeros(64*64)
         prueba3.shape=(64,64)
         pruebaY.shape=(32,32)
         prueba3[0:32,0:32]=pruebaY[0:32,0:32]
         prueba3 = cv2.idct(prueba3)
-        prueba3=cv2.resize(prueba3,(256,256)) 
+        prueba3 = cv2.resize(prueba3,(256,256))
+        prueba3=prueba3*255
         #file2 = "./OUT_images/orig_y.jpg" 
         #cv2.imwrite(file2, prueba3)
+        #cv2.imshow("origY", prueba3) 
+        #cv2.waitKey(0);
+        print ("  Y ok")
        
         # ESTA ES LA RECONSTRUIDA
         prueba=predicted[i-1]
-        prueba=(prueba-0.5)*100 # la dct estaba comprimida
+        prueba=(prueba-0.5)*100 # la dct estaba "comprimida"
         #prueba=prueba[0] # primer elemento de la lista
         prueba.shape=(32,32)
+        prueba2=np.zeros(64*64)
         prueba2.shape=(64,64)
         prueba2[0:32,0:32]=prueba[0:32,0:32] #copia de 1er cuadrante
         prueba2 = cv2.idct(prueba2)
-        prueba2=cv2.resize(prueba2,(256,256)) 
+        prueba2=cv2.resize(prueba2,(256,256))
+        prueba2=prueba2*255
         #file3 = "./OUT_images/rebuilt.jpg" 
         #cv2.imwrite(file3, prueba2)
+        #cv2.imshow("rebuilt", prueba2)  
+        #cv2.waitKey(0);
+        
+        print ("  rebuilt ok")
 
         name="./OUT_images/img_"+str(i)+"_.jpg"
-        img_h_resize = concat_tile_resize([[orig, prueba3, prueba2]])
+        print ("file name ", name)
+        img_h_resize = cv2.hconcat([orig, prueba3, prueba2]) #hconcat_resize([orig, prueba3, prueba2])
         cv2.imwrite(name, img_h_resize)
-
-
-
     
 ###########################################################################################################################
 #__CLOUDBOOK:LOCAL__
@@ -458,65 +473,8 @@ print('============================================')
 
 print("generando imagenes de ejemplo...")
 print("--------------------------------")
+generaImages(predicted)
 
-# crea el directorio de imagenes si no existe
-
-directorio = "./OUT_images/"
-try:
-    os.stat(directorio)
-except os.error:
-    os.mkdir(directorio)
-    
-for i in range(0,4): #4 fotos concretas. el nombre tiene un numero aunque la cero es la uno
-    print ("componiendo foto", i) 
-    print("input shape:",_DATA_TEST_X[i-1].shape) #i-1 porque comienzan numeracion en cero
-    # ESTA ES LA ORIGINAL
-    orig=cv2.resize(_DATA_TEST_X[i-1],(256,256))
-    #cv2.imshow("orig", orig) 
-    #cv2.waitKey(0);
-    #file1 = "./OUT_images/orig.jpg"
-    orig=orig*255
-    #orig = cv2.cvtColor(orig,cv2.COLOR_GRAY2BGR)
-    #cv2.imwrite(file1, orig)
-    print ("  orig ok")
-    
-    #ESTA ES LA Y
-    pruebaY=(_DATA_TEST_Y[i-1]-0.5)*100 # la dct estaba "comprimida"
-    prueba3=np.zeros(64*64)
-    prueba3.shape=(64,64)
-    pruebaY.shape=(32,32)
-    prueba3[0:32,0:32]=pruebaY[0:32,0:32]
-    prueba3 = cv2.idct(prueba3)
-    prueba3 = cv2.resize(prueba3,(256,256))
-    prueba3=prueba3*255
-    #file2 = "./OUT_images/orig_y.jpg" 
-    #cv2.imwrite(file2, prueba3)
-    #cv2.imshow("origY", prueba3) 
-    #cv2.waitKey(0);
-    print ("  Y ok")
-   
-    # ESTA ES LA RECONSTRUIDA
-    prueba=predicted[i-1]
-    prueba=(prueba-0.5)*100 # la dct estaba "comprimida"
-    #prueba=prueba[0] # primer elemento de la lista
-    prueba.shape=(32,32)
-    prueba2=np.zeros(64*64)
-    prueba2.shape=(64,64)
-    prueba2[0:32,0:32]=prueba[0:32,0:32] #copia de 1er cuadrante
-    prueba2 = cv2.idct(prueba2)
-    prueba2=cv2.resize(prueba2,(256,256))
-    prueba2=prueba2*255
-    #file3 = "./OUT_images/rebuilt.jpg" 
-    #cv2.imwrite(file3, prueba2)
-    #cv2.imshow("rebuilt", prueba2)  
-    #cv2.waitKey(0);
-    
-    print ("  rebuilt ok")
-
-    name="./OUT_images/img_"+str(i)+"_.jpg"
-    print ("file name ", name)
-    img_h_resize = cv2.hconcat([orig, prueba3, prueba2]) #hconcat_resize([orig, prueba3, prueba2])
-    cv2.imwrite(name, img_h_resize)
 
 #SKYNNET:END
 
