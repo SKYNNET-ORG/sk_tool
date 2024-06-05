@@ -411,7 +411,8 @@ _FILTERS_1 = 64 #64
 _FILTERS_2 = 64 #64
 _NEURON_1 = 4096 #4096 # 4 *freq*freq
 _NEURON_2 = 1024 # freq*freq
-_EPOCHS= 25
+#_EPOCHS= 25
+EPOCAS= 25
 print ("train x shape:",x_train.shape)
 print ("train y shape:",y_train.shape)
 print ("_DATA_TRAIN_X shape:",_DATA_TRAIN_X.shape)
@@ -454,7 +455,7 @@ regresor.compile( optimizer='adam', loss='mse')
 
 start=time.time()
 regresor.fit(_DATA_TRAIN_X, _DATA_TRAIN_Y,
-                epochs = _EPOCHS,
+                epochs = EPOCAS,
                 batch_size = batch_size,
                 shuffle = myshufle,
                 validation_split = 0.2,
