@@ -28,7 +28,8 @@ _DATA_TEST_Y = y_test
 _NEURON_1 = 32
 _NEURON_2 = 16
 _NEURON_3 = 2
-_EPOCHS = 8
+#_EPOCHS = 8
+_EPOCAS = 8 #usamos otro nombre de variable para mantener las epocas
 
 inputs = tf.keras.Input(shape=(28,28))
 x = tf.keras.layers.Flatten()(inputs)
@@ -47,7 +48,7 @@ start=time.time()
 
 model.fit(_DATA_TRAIN_X, _DATA_TRAIN_Y,
         validation_split=0.3,
-        epochs=_EPOCHS)
+        epochs=_EPOCAS)
 end=time.time()
 print (" original: tiempo transcurrido (segundos) =", (end-start))
 
