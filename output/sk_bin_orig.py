@@ -1,4 +1,5 @@
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 import tensorflow as tf, numpy as np
 import matplotlib.pyplot as plt
 import math
@@ -86,7 +87,7 @@ def skynnet_train_0(sk_i):
 	_DATA_TEST_Y = y_test
 	_NEURON_1 = 16
 	_NEURON_2 = 8
-	_NEURON_3 = 2
+	_NEURON_3 = 4
 	_EPOCHS = 4
 	datos_train_x_1 = _DATA_TRAIN_X[:len(_DATA_TRAIN_X) // 2]
 	datos_train_x_2 = _DATA_TRAIN_X[len(_DATA_TRAIN_X) // 2:]

@@ -1,4 +1,5 @@
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
@@ -53,9 +54,6 @@ y_train = loaded_dataset[0][1]
 x_val = loaded_dataset[1][0]
 y_val = loaded_dataset[1][1]
 
-
-print(len(x_train), "Training sequences")
-print(len(x_val), "Validation sequences")
 x_train = keras.preprocessing.sequence.pad_sequences(x_train, maxlen=maxlen)
 x_val = keras.preprocessing.sequence.pad_sequences(x_val, maxlen=maxlen)
 
@@ -136,7 +134,7 @@ def skynnet_train_0(sk_i):
 	_DATA_TEST_Y = y_train
 	_EMBEDDING_ = 16
 	_NEURON_1 = 10
-	_NEURON_2 = 2
+	_NEURON_2 = 8
 	_EPOCHS = 1
 	_BATCH = 32
 	num_heads = 2

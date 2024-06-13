@@ -16,7 +16,7 @@ x_train = x_train / 255.0
 x_test =  x_test / 255.0
 
 
-#SKYNNET:BEGIN_MULTICLASS
+#SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
 
 #__CLOUDBOOK:LOCAL__
 def dividir_array_categorias(array, n, m):
@@ -144,6 +144,8 @@ def skynnet_prediction_0():
 
 #SKYNNET:END
 
+def main():
+	pass
 
 
 #__CLOUDBOOK:DU0__
@@ -168,15 +170,23 @@ def skynnet_prediction_global_0():
 		if _DATA_TEST_Y[i] == np.argmax(predicted[i]):
 			correctas += 1
 		total += 1
-	precision_compuesta = correctas / total
+	precision_compuesta.append(correctas / total)
 	print('============================================')
-	print('La accuracy de la prediccion es: ', precision_compuesta)
+	print('Skynnet Info: La accuracy de la prediccion compuesta es: ', precision_compuesta)
 	print('============================================')
-	scce = tf.keras.losses.SparseCategoricalCrossentropy()
-	scce_orig = scce(_DATA_TEST_Y, predicted).numpy()
-	print('============================================')
-	print('La loss es: ', scce_orig)
-	print('============================================')
+	if _DATA_TEST_Y[0].shape != ():
+		#La salida tiene mas de una dimension
+		cce = tf.keras.losses.CategoricalCrossentropy()
+		cce_orig = cce(_DATA_TEST_Y, predicted).numpy()
+		print('============================================')
+		print('Skynnet Info: La loss compuesta es (cce): ', cce_orig)
+		print('============================================')
+	else:
+		scce = tf.keras.losses.SparseCategoricalCrossentropy()
+		scce_orig = scce(_DATA_TEST_Y, predicted).numpy()
+		print('============================================')
+		print('Skynnet Info: La loss compuesta es (scce): ', scce_orig)
+		print('============================================')
 
 
 #__CLOUDBOOK:MAIN__

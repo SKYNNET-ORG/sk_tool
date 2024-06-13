@@ -2,6 +2,7 @@
 import sk_extra_codes
 from ast import *
 import sys
+import os
 import re
 from ast_comments import *
 from math import comb,ceil
@@ -89,14 +90,14 @@ class VisitAssignSkVars(NodeVisitor):
                 variable_skynnet = testing_variable[0]==True
                 variable_skynnet_name = testing_variable[1]
                 if variable_valida and variable_skynnet:
-                    new_value = ceil(node.value.value/self.reduccion)
+                    #new_value = ceil(node.value.value/self.reduccion)
+                    new_value = node.value.value/self.reduccion
                     if variable_skynnet_name == '_FILTERS_' and new_value<2:
                         #print(f"WARNING: Reducing the filters variable would make make the last layer with filters smaller than two, so IT WILL NOT DECONSTRUCT THE LAYERS WITH FILTERS.  Check the source code to deconstruct it. ")
-                        print(
-                            "WARNING: Reducing the filters variable would make make the last layer with filters "
-                            "smaller than two, so IT WILL NOT DECONSTRUCT THE LAYERS WITH FILTERS. "
-                            "Check the source code to make it able to deconstruct it."
-                        )                       
+                        print(f"ERROR: La variable _FILTERS_{testing_variable[2]} va a ser {new_value}, menor que 2, por lo que no se va a deconstruir"
+                            "\n\tHaz la capa mas grande o divide en menos subredes, operacion abortada."
+                            )
+                        sys.exit()
                         self.permiso = False                        
                         sk_vars_list.remove("_FILTERS_")
 
@@ -107,6 +108,7 @@ class TransformAssignSkVars(ast.NodeTransformer):
 
     def __init__(self,reduccion=1):
         self.reduccion = reduccion #Indica por cuanto hay que dividir el valor de la asignacion
+        self.permiso = True #Si el permiso es false, no se deconstruye porque queda demasiado pequeño
 
     def visit_Assign(self, node):
         '''Esta funcion es la que divide por un numero entero las variables de skynnet
@@ -119,10 +121,15 @@ class TransformAssignSkVars(ast.NodeTransformer):
                 variable_skynnet_name = testing_variable[1]
                 if variable_valida and variable_skynnet:
                     new_value = ast.Constant(value=(ceil(node.value.value/self.reduccion)))
+                    new_value_permission = ast.Constant(value=(node.value.value/self.reduccion))
                     #print(f"La variable {variable_skynnet_name} se queda en {new_value.value} por que la reduccion es {node.value.value}/{self.reduccion}")
-                    if new_value.value <2 and variable_skynnet_name != '_EPOCHS':
-                        print(f"WARNING: Deconstruction on variable {node.targets[0].id} is gonna be reduced to {new_value.value} instead of that it will be reduced to 2")
+                    if new_value_permission.value <2 and variable_skynnet_name != '_EPOCHS':
+                        print(f"ERROR: La variable {node.targets[0].id} se va a reducir a {new_value_permission.value}, menor que 2, por lo que no se va a deconstruir"
+                        "\n\tHaz la capa mas grande o divide en menos subredes, operacion abortada."
+                            )
+                        sys.exit()
                         new_value.value = 2
+                        self.permiso = False
                     
                     new_node = ast.Assign(targets=node.targets, value=new_value, lineno = node.lineno)
                     return new_node

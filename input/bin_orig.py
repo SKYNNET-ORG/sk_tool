@@ -27,7 +27,7 @@ _DATA_TEST_X = x_test
 _DATA_TEST_Y = y_test
 _NEURON_1 = 32
 _NEURON_2 = 16
-_NEURON_3 = 2
+_NEURON_3 = 8
 _EPOCHS = 8
 
 inputs = tf.keras.Input(shape=(28,28))

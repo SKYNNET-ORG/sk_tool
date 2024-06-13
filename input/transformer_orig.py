@@ -75,7 +75,7 @@ _DATA_TEST_Y = y_train
 
 _EMBEDDING_ = 32
 _NEURON_1 = 20
-_NEURON_2 = 2
+_NEURON_2 = 16
 _EPOCHS = 2
 _BATCH = 32
 
