@@ -614,7 +614,12 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
         categorias = visit_categorias.n_categorias #Esto es igual que last_neuron[1]
         print(f"Son {categorias} categorias originales")
         #Se calcula cuantas subredes quedaran
-        num_subredes,combinatorio = get_categorias(num_subredes, categorias)
+        #num_subredes,combinatorio = get_categorias(num_subredes, categorias)
+        try:
+            num_subredes,combinatorio = get_categorias(num_subredes, categorias)
+        except Exception as e:
+            print(f"Error en el calculo de categorias, prueba un numero de subredes mas grande")
+            sys.exit()
         grupos = combinatorio[0]
         tomados = combinatorio[1]
         print(f"Para formar subredes=C{combinatorio} es decir {grupos} categorias tomados de {tomados} en {tomados}")
