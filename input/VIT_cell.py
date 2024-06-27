@@ -11,6 +11,7 @@ from tensorflow.keras import layers
 import os
 import pandas as pd
 
+mezclas = 0
 #######################################################################################
 #__CLOUDBOOK:LOCAL__
 def adaptImages(x_train,samples,data_type,a, h2,w2, channels2):
@@ -188,7 +189,8 @@ def loadDataset(tipo, ds_name, directorio):
     #
     #   "standar" si es un dataset de los que se pueden cargar con el modulo tdfs de tensorflow
     #
-    #  esta funcion retorna x_train, y_train
+    #  esta funcion retorna x_train, y_train+
+    global mezclas
     ds_dir=ds_name #directorio de descarga
     lote_size=1 
     if (tipo=="standar"):
@@ -294,6 +296,7 @@ def loadDataset(tipo, ds_name, directorio):
         y_train = y_train[ind]
         print("x_train.shape", x_train.shape)
         print("number of classes", n_classes)
+        mezclas += 1
         #x_train.shape=(idx,resolution,resolution,3)
 
         print("", end="\n")
@@ -337,14 +340,14 @@ def load_data():
     a=a / 255.0
     x_train = a
 
-'''def main():
+def main():
     if hasattr(main,'executed'):
         return
     else:
         setattr(main,'executed',True)
     load_data()
 
-main()'''
+main()
 
 #SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
 if x_train is None:
@@ -354,11 +357,12 @@ _DATA_TRAIN_Y = y_train
 _DATA_TEST_X = x_train[-2000:]
 _DATA_TEST_Y = y_train[-2000:]
 
-_NEURON_1 = 128 
+
+
+
 _NEURON_2 = 4 #n_classes 
 _EMBEDDING_ = 32 #dimensión del espacio latente
-
-_EPOCHS = 25
+_EPOCHS = 10
 
 batch_size= 128 #8 #32# 32#64 para disney, usar 8 porque hay pocas imagenes. para caltech usar 32
 input_shape=[h2, w2, channels2] # alto final, ancho final, canales.
@@ -367,7 +371,7 @@ embeddings_dim=_EMBEDDING_ # bytes de cada vector
 transformer_layers=4 # 3 encoders
 num_heads=4 
 transformer_units =[128, embeddings_dim] # Size of the transformer layers
-mlp_head_units=[_NEURON_1,128]  # Size of the dense layers of the final classifier. 
+mlp_head_units=[128,128]  # Size of the dense layers of the final classifier. 
 num_epocas=_EPOCHS #10
 my_split=0.2 # un 20% del conjunto de train lo usamos para validar
 lr=2e-3 #1e-2 #1e-4 # learning rate  (default de keras es 0.001 es decir 1e-3)
@@ -448,7 +452,7 @@ def create_vit_classifier(input_shape,
     features = mlp(representation, hidden_units=mlp_head_units, dropout_rate=dropout)
     
     # Classify outputs.
-    logits = layers.Dense(_NEURON_2,activation='softmax')(features)
+    logits = layers.Dense(_NEURON_2, activation='softmax')(features)
     
     # Create the Keras model.
     vit_classifier = keras.Model(inputs=inputs, outputs=logits)
@@ -479,7 +483,7 @@ print(vit_classifier.summary())
 optimizer = tf.optimizers.Adam(learning_rate=lr)
 vit_classifier.compile(
         optimizer=optimizer,
-        loss=keras.losses.SparseCategoricalCrossentropy(from_logits=False),
+        loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
         metrics=[keras.metrics.SparseCategoricalAccuracy(name="accuracy")]
 )
 
@@ -513,10 +517,11 @@ prediction = vit_classifier.predict(_DATA_TEST_X)
 for i in [0,1,2,3]:
 #    print(np.where(_DATA_TEST_Y==i))
     print('class ', i, ', num_elements=', len(np.where(_DATA_TEST_Y==i)[0]), '  (',len(np.where(_DATA_TEST_Y==i)[0])/len(_DATA_TEST_Y)*100., '%)' )
+print('prediction',prediction)
 prediction = [np.argmax(p) for p in prediction]
-#print('prediction',prediction)
-print('acc=',sum(prediction==_DATA_TEST_Y)/len(prediction))
 
+print('acc=',sum(prediction==_DATA_TEST_Y)/len(prediction))
+print(f"Mezclas de datos: {mezclas}")
 #df = pd.DataFrame( {'accuracy':history.history['accuracy'],'val_accuracy':history.history['val_accuracy'], 'loss':history.history['loss'],'val_loss':history.history['val_loss']} )
 #df.index.rename('epoch', inplace=True)
 #df.to_csv('learning_curves.csv')

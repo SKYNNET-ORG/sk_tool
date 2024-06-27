@@ -14,7 +14,14 @@ y_test = mnist.load_data()[1][1]
 #Noramalize the pixel values by deviding each pixel by 255
 x_train = x_train / 255.0
 x_test =  x_test / 255.0
-
+#__CLOUDBOOK:DU0__
+def main():
+    if hasattr(main,'executed'):
+        return
+    else:
+        setattr(main,'executed',True)
+    print("hola")
+main()
 
 #SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
 

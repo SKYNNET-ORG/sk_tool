@@ -14,7 +14,14 @@ y_test = mnist.load_data()[1][1]
 #Noramalize the pixel values by deviding each pixel by 255
 x_train = x_train / 255.0
 x_test =  x_test / 255.0
-
+#__CLOUDBOOK:DU0__
+def main():
+	if hasattr(main,'executed'):
+		return
+	else:
+		setattr(main,'executed',True)
+	print("hola")
+main()
 
 #SKYNNET:BEGIN_MULTICLASS_ACC_LOSS
 
@@ -97,7 +104,8 @@ def skynnet_train_0(sk_i):
 	categorias_incluir = np.unique(_DATA_TRAIN_Y)
 	etiquetas_consecutivas = np.arange(len(categorias_incluir))
 	_DATA_TRAIN_Y = np.searchsorted(categorias_incluir, _DATA_TRAIN_Y)
-	_NEURON_3 = len(np.unique(_DATA_TRAIN_Y))
+	#_NEURON_3 = len(np.unique(_DATA_TRAIN_Y))
+	_NEURON_3 = len(combinacion_arrays)
 	inputs = tf.keras.Input(shape=(28, 28))
 	x = tf.keras.layers.Flatten()(inputs)
 	x = tf.keras.layers.Dense(_NEURON_1, activation='relu')(x)

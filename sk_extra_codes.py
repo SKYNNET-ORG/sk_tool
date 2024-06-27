@@ -71,7 +71,8 @@ print("======================================")
 categorias_incluir = np.unique({datos_y})
 etiquetas_consecutivas = np.arange(len(categorias_incluir))
 {datos_y} = np.searchsorted(categorias_incluir, {datos_y})
-{last_neuron[0]} = len(np.unique({datos_y}))
+#{last_neuron[0]} = len(np.unique({datos_y}))
+{last_neuron[0]} = len(combinacion_arrays)
 '''
     return division_datos
 
