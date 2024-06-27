@@ -130,8 +130,6 @@ def skynnet_train_0(sk_i):
 	_DATA_TRAIN_Y = y_train
 	_DATA_VAL_X = x_val
 	_DATA_VAL_Y = y_val
-	_DATA_TEST_X = x_train
-	_DATA_TEST_Y = y_train
 	_EMBEDDING_ = 16
 	_NEURON_1 = 10
 	_NEURON_2 = 8

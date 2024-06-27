@@ -93,8 +93,6 @@ def skynnet_train_0(sk_i):
 	_DATA_TRAIN_Y = y_train
 	_DATA_VAL_X = x_validate
 	_DATA_VAL_Y = y_validate
-	_DATA_TEST_X = x_test
-	_DATA_TEST_Y = y_test
 	_NEURON_1 = 43
 	_NEURON_2 = 7
 	_EPOCHS = 7

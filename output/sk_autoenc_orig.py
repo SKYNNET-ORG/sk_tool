@@ -97,8 +97,6 @@ def skynnet_train_0(sk_i):
 	_DATA_TRAIN_Y = x_train_out
 	_DATA_VAL_X = x_test
 	_DATA_VAL_Y = x_test_out
-	_DATA_TEST_X = x_test
-	_DATA_TEST_Y = x_test_out
 	bottleneck = 32
 	_NEURON_3 = 196
 	_EPOCHS = 8

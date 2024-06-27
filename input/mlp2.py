@@ -29,6 +29,7 @@ _DATA_TRAIN_X = x_train
 _DATA_TRAIN_Y = y_train
 _DATA_TEST_X = x_test
 _DATA_TEST_Y = y_test
+
 _NEURON_1 = 128
 _NEURON_2 = 60
 _NEURON_3 = 10
@@ -53,6 +54,7 @@ model.compile(optimizer='adam',
 model.fit(_DATA_TRAIN_X, _DATA_TRAIN_Y, validation_split=0.3, epochs=_EPOCHS)
 end=time.time()
 print (" tiempo de training transcurrido (segundos) =", (end-start))
+
 
 predicted = model.predict(_DATA_TEST_X)
 

@@ -83,8 +83,6 @@ def skynnet_train_0(sk_i):
 	global to_predict_models
 	_DATA_TRAIN_X = x_train
 	_DATA_TRAIN_Y = y_train
-	_DATA_TEST_X = x_test
-	_DATA_TEST_Y = y_test
 	_NEURON_1 = 16
 	_NEURON_2 = 8
 	_NEURON_3 = 4

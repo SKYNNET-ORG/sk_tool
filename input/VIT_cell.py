@@ -362,7 +362,7 @@ _DATA_TEST_Y = y_train[-2000:]
 
 _NEURON_2 = 4 #n_classes 
 _EMBEDDING_ = 32 #dimensión del espacio latente
-_EPOCHS = 10
+_EPOCHS = 1
 
 batch_size= 128 #8 #32# 32#64 para disney, usar 8 porque hay pocas imagenes. para caltech usar 32
 input_shape=[h2, w2, channels2] # alto final, ancho final, canales.

@@ -366,6 +366,17 @@ class ModifyPaths(ast.NodeTransformer):
         self.generic_visit(node)
         return node
 
+class NodeRemover(ast.NodeTransformer):
+    def __init__(self, target_node):
+        self.target_node = target_node
+
+    def visit(self, node):
+        # Si el nodo es del tipo que queremos eliminar, devolver None lo elimina
+        #if isinstance(node, self.target_node_type):
+        if node==self.target_node:
+            return None
+        return self.generic_visit(node)
+
 def get_data_type(tipo_datos):
     if tipo_datos == "train":
         datos_x = "_DATA_TRAIN_X"
@@ -722,6 +733,10 @@ def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number)
     
     #Paso 8: Funcion skynnet block que divide datos, crea y entrena modelos
     #Se llama block por el bloque skynnet que gestiona, puede trabajar con varios modelos
+    for i in sk_dict['data_test']:
+        print(i)
+        remover = NodeRemover(i)
+        node_data_vars_reduced = remover.visit(node_data_vars_reduced)
     parallel_cloudbook_label = Expr(value=Comment(value='#__CLOUDBOOK:PARALLEL__'))
     fout.write(unparse(fix_missing_locations(parallel_cloudbook_label)))
     #Aqui cambiamos los model por model[i]
