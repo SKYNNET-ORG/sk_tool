@@ -59,6 +59,19 @@ except:
     pass
 '''
 
+def division_datos_gen_fit(categorias,grupos,last_neuron,tipo_red,datos_y):
+    division_datos = f'''grupos_de_categorias = dividir_array_categorias({datos_y},{categorias},{grupos})
+combinacion_arrays = combinar_arrays(grupos_de_categorias)[sk_i]
+{datos_y} = {datos_y}[np.isin({datos_y},combinacion_arrays)]
+print("======================================")
+print("Skynnet Info: Categorias de esta subred",np.unique({datos_y}))
+print("======================================")
+categorias_incluir = np.unique({datos_y})
+etiquetas_consecutivas = np.arange(len(categorias_incluir))
+{last_neuron[0]} = len(combinacion_arrays)
+    '''
+    return division_datos
+
 def division_datos_fit_multiclass(categorias,grupos,datos_x,datos_y,last_neuron):
     division_datos = f'''grupos_de_categorias = dividir_array_categorias({datos_y},{categorias},{grupos})
 combinacion_arrays = combinar_arrays(grupos_de_categorias)[sk_i]
@@ -71,7 +84,6 @@ print("======================================")
 categorias_incluir = np.unique({datos_y})
 etiquetas_consecutivas = np.arange(len(categorias_incluir))
 {datos_y} = np.searchsorted(categorias_incluir, {datos_y})
-#{last_neuron[0]} = len(np.unique({datos_y}))
 {last_neuron[0]} = len(combinacion_arrays)
 '''
     return division_datos

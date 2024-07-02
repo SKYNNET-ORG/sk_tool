@@ -107,7 +107,6 @@ def skynnet_train_0(sk_i):
 	categorias_incluir = np.unique(_DATA_TRAIN_Y)
 	etiquetas_consecutivas = np.arange(len(categorias_incluir))
 	_DATA_TRAIN_Y = np.searchsorted(categorias_incluir, _DATA_TRAIN_Y)
-	#_NEURON_2 = len(np.unique(_DATA_TRAIN_Y))
 	_NEURON_2 = len(combinacion_arrays)
 	grupos_de_categorias = dividir_array_categorias(_DATA_VAL_Y, 10, 3)
 	combinacion_arrays = combinar_arrays(grupos_de_categorias)[sk_i]
@@ -120,7 +119,6 @@ def skynnet_train_0(sk_i):
 	categorias_incluir = np.unique(_DATA_VAL_Y)
 	etiquetas_consecutivas = np.arange(len(categorias_incluir))
 	_DATA_VAL_Y = np.searchsorted(categorias_incluir, _DATA_VAL_Y)
-	#_NEURON_2 = len(np.unique(_DATA_VAL_Y))
 	_NEURON_2 = len(combinacion_arrays)
 	model[sk_i] = tf.keras.Sequential()
 	model[sk_i].add(tf.keras.layers.Input(shape=(28, 28)))

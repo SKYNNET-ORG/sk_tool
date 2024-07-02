@@ -362,20 +362,20 @@ _DATA_TEST_Y = y_train[-2000:]
 
 _NEURON_2 = 4 #n_classes 
 _EMBEDDING_ = 32 #dimensión del espacio latente
-_EPOCHS = 1
+epocas = 150
 
-batch_size= 128 #8 #32# 32#64 para disney, usar 8 porque hay pocas imagenes. para caltech usar 32
+batch_size= 64 #8 #32# 32#64 para disney, usar 8 porque hay pocas imagenes. para caltech usar 32
 input_shape=[h2, w2, channels2] # alto final, ancho final, canales.
 image_size=w2 # lado del tamaño final de las imagenes
-embeddings_dim=_EMBEDDING_ # bytes de cada vector
+embeddings_dim=32#_EMBEDDING_ # bytes de cada vector
 transformer_layers=4 # 3 encoders
 num_heads=4 
 transformer_units =[128, embeddings_dim] # Size of the transformer layers
-mlp_head_units=[128,128]  # Size of the dense layers of the final classifier. 
-num_epocas=_EPOCHS #10
+mlp_head_units=[256,128]#[128,128]  # Size of the dense layers of the final classifier. 
+num_epocas=epocas #10
 my_split=0.2 # un 20% del conjunto de train lo usamos para validar
-lr=2e-3 #1e-2 #1e-4 # learning rate  (default de keras es 0.001 es decir 1e-3)
-num_patches_lado=2 #6 # los patches que caben por lado
+lr=1e-3#2e-3 #1e-2 #1e-4 # learning rate  (default de keras es 0.001 es decir 1e-3)
+num_patches_lado=6#2 # los patches que caben por lado
 num_patches=num_patches_lado*num_patches_lado # numero total de patches
 patch_size=w2//num_patches_lado # lado de un patch
 if (patch_size!=w2/num_patches_lado):
@@ -477,16 +477,17 @@ vit_classifier = create_vit_classifier(input_shape=input_shape,
 
     
    
-print(vit_classifier.summary())
+#print(vit_classifier.summary())
 
 #history = run_experiment(vit_classifier, _DATA_TRAIN_X, _DATA_TRAIN_Y,num_epocas,my_split, batch_size,lr)
 optimizer = tf.optimizers.Adam(learning_rate=lr)
 vit_classifier.compile(
         optimizer=optimizer,
-        loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+        loss=keras.losses.SparseCategoricalCrossentropy(from_logits=False),
         metrics=[keras.metrics.SparseCategoricalAccuracy(name="accuracy")]
 )
-
+print(f"Parametros del modelo: {vit_classifier.count_params()}")
+start = time.time()
 # --- TRAINING ---
 history = vit_classifier.fit(
     _DATA_TRAIN_X,
@@ -496,7 +497,8 @@ history = vit_classifier.fit(
     shuffle=True,
     validation_split=my_split,
 )
-
+end = time.time()
+print(' tiempo de training transcurrido (segundos) =', end - start)
 
 
 #filename="learning_curve_VIT_"+ds_name+".png"
@@ -517,7 +519,7 @@ prediction = vit_classifier.predict(_DATA_TEST_X)
 for i in [0,1,2,3]:
 #    print(np.where(_DATA_TEST_Y==i))
     print('class ', i, ', num_elements=', len(np.where(_DATA_TEST_Y==i)[0]), '  (',len(np.where(_DATA_TEST_Y==i)[0])/len(_DATA_TEST_Y)*100., '%)' )
-print('prediction',prediction)
+#print('prediction',prediction)
 prediction = [np.argmax(p) for p in prediction]
 
 print('acc=',sum(prediction==_DATA_TEST_Y)/len(prediction))

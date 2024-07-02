@@ -102,7 +102,6 @@ def skynnet_train_0(sk_i):
 	categorias_incluir = np.unique(_DATA_TRAIN_Y)
 	etiquetas_consecutivas = np.arange(len(categorias_incluir))
 	_DATA_TRAIN_Y = np.searchsorted(categorias_incluir, _DATA_TRAIN_Y)
-	#_NEURON_3 = len(np.unique(_DATA_TRAIN_Y))
 	_NEURON_3 = len(combinacion_arrays)
 	inputs = tf.keras.Input(shape=(28, 28))
 	x = tf.keras.layers.Flatten()(inputs)

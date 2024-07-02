@@ -287,6 +287,7 @@ class GetModelDataVars(ast.NodeVisitor):
     data_vars_train = ["_DATA_TRAIN_X","_DATA_TRAIN_Y"]
     data_vars_val = ["_DATA_VAL_X","_DATA_VAL_Y"]
     data_vars_test = ["_DATA_TEST_X","_DATA_TEST_Y"]
+    data_vars_train_gen = {"_DATA_TRAIN_GEN_X","_DATA_TRAIN_GEN_Y"}
 
     #def __init__(self,model_name, dict_modelo):
     def __init__(self, dict_modelo):
@@ -294,6 +295,7 @@ class GetModelDataVars(ast.NodeVisitor):
         self.dict_modelo["data_train"] = []
         self.dict_modelo["data_val"] = []
         self.dict_modelo["data_test"] = []
+        self.dict_modelo["data_gen_train"] = [] #data generator for training
 
     def visit_Assign(self,node):
         try:
@@ -303,6 +305,8 @@ class GetModelDataVars(ast.NodeVisitor):
                 self.dict_modelo["data_val"].append(node)
             if len(node.targets)==1 and node.targets[0].id in self.data_vars_test:
                 self.dict_modelo["data_test"].append(node)
+            if len(node.targets)==1 and node.targets[0].id in self.data_vars_train_gen:
+                self.dict_modelo["data_gen_train"].append(node)
         except:
             pass
 
@@ -377,6 +381,12 @@ class NodeRemover(ast.NodeTransformer):
             return None
         return self.generic_visit(node)
 
+def generator_datos_train_fit(categorias,grupos,last_neuron,tipo_red):
+    datos_y = "_DATA_TRAIN_GEN_Y"
+    division_datos_gen = sk_extra_codes.division_datos_gen_fit(categorias,grupos,last_neuron,tipo_red,datos_y)
+    return fix_missing_locations(parse(division_datos_gen))
+
+
 def get_data_type(tipo_datos):
     if tipo_datos == "train":
         datos_x = "_DATA_TRAIN_X"
@@ -448,6 +458,9 @@ def inserta_filtro_datos(nodo_destino,tipo_funcion,sk_dict,categorias,grupos,las
     nodo_destino: nodo tipo funcion en el que hay que insertar'''
     model_name = sk_dict['name']
     if tipo_funcion=="general":
+        if sk_dict["data_gen_train"] != []:
+            to_insert_node = generator_datos_train_fit(categorias,grupos,last_neuron,tipo_red)
+            inserta_nodo(sk_dict,model_name,to_insert_node,nodo_destino,last_neuron)
         if sk_dict["data_train"] != []:
             to_insert_node = division_datos_fit("train",categorias,grupos,last_neuron,tipo_red)
             inserta_nodo(sk_dict,model_name,to_insert_node,nodo_destino,last_neuron)
