@@ -1,5 +1,5 @@
 
-from . import sk_extra_codes
+import sk_extra_codes
 from ast import *
 import sys
 import os
