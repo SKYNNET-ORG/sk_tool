@@ -263,6 +263,7 @@ def loadDataset(tipo, ds_name, directorio):
             n_classes=n_classes+1
             categoria=n_classes-1
             imagenes = os.listdir(directorio+"/"+subdir)
+            #print(f"carpeta: {subdir},clase:{categoria}")
             for img_name in imagenes:
                 idx=idx+1
                 name=directorio+"/"+subdir+"/"+img_name
@@ -359,23 +360,23 @@ _DATA_TEST_Y = y_train[-2000:]
 
 
 
-
+print(f"w2,h2:{w2},{h2}")
 _NEURON_2 = 4 #n_classes 
 _EMBEDDING_ = 32 #dimensión del espacio latente
 epocas = 150
 
-batch_size= 64 #8 #32# 32#64 para disney, usar 8 porque hay pocas imagenes. para caltech usar 32
+batch_size= 128#64 #8 #32# 32#64 para disney, usar 8 porque hay pocas imagenes. para caltech usar 32
 input_shape=[h2, w2, channels2] # alto final, ancho final, canales.
 image_size=w2 # lado del tamaño final de las imagenes
 embeddings_dim=32#_EMBEDDING_ # bytes de cada vector
 transformer_layers=4 # 3 encoders
 num_heads=4 
-transformer_units =[128, embeddings_dim] # Size of the transformer layers
-mlp_head_units=[256,128]#[128,128]  # Size of the dense layers of the final classifier. 
+transformer_units =[128,embeddings_dim]#[128, embeddings_dim] # Size of the transformer layers
+mlp_head_units=[128,32]#[128]#[128,128]  # Size of the dense layers of the final classifier. 
 num_epocas=epocas #10
 my_split=0.2 # un 20% del conjunto de train lo usamos para validar
 lr=1e-3#2e-3 #1e-2 #1e-4 # learning rate  (default de keras es 0.001 es decir 1e-3)
-num_patches_lado=6#2 # los patches que caben por lado
+num_patches_lado=2#16#2 # los patches que caben por lado
 num_patches=num_patches_lado*num_patches_lado # numero total de patches
 patch_size=w2//num_patches_lado # lado de un patch
 if (patch_size!=w2/num_patches_lado):

@@ -1,5 +1,5 @@
 
-import sk_extra_codes
+from . import sk_extra_codes
 from ast import *
 import sys
 import os
@@ -573,9 +573,12 @@ def get_combinacion(a, n):
     pairs = []
     r = 2
     c = comb(n, r)
+    #print(f"\tLa combinacion entre {n} y {r} es: {c}")
     if c == a:
+        #print(f"\tComo la combinacion c={c} es igual que subred={a}, lo añado a la lista parejas")
         pairs.append((n, r))
     if n > 1:
+        #print(f"\tComo categorias:{n} es > que 1, hago una llamada recursiva con {a} y {n-1}")
         pairs += get_combinacion(a, n - 1)
     
     return pairs
@@ -593,15 +596,21 @@ def get_categorias(subredes, categorias):
     """
     results = {}
     for subred in range(subredes,1,-1):
+        #print(f"Para la subred {subred}, calculamos la combinacion entre {subred}y{categorias}")
         pairs = get_combinacion(subred,categorias)
+        #print(f"get_combinacion me devuelve las lista de parejas {pairs}")
         for i in pairs:
             #results.append(i)
+            #print(f"En el diccionario de resultados pongo la pareja {i} en la clave subred={subred}")
             results[subred]=i
     #devuelvo el numero deseado si es posible, o uno menor, para que quede una maquina libre
     if subredes in results:
+        #print(f"Como en el diccionario de resultados esta el numero de subredes {subreds} lo devuelvo")
         n_subredes = subredes
     else:
+        #print(f"El numero de subredes sera el maximo valor del diccionarios {results}")
         n_subredes = max(results.keys())
+    #print(f"Devuelvo n_subredes={n_subredes} y results[n_subredes]={results[n_subredes]}")
     return n_subredes,results[n_subredes]
 
 def process_skynnet_code(code, skynnet_config, fout, num_subredes, block_number):
@@ -1069,6 +1078,43 @@ def write_sk_global_code(number_of_sk_functions,fo):
     )
     fix_missing_locations(main_block)
     fo.write(unparse(main_block))
+
+def main_skynnet(carpeta,file,n_subredes):
+    global num_subredes
+    n = n_subredes
+    orig_file = carpeta+"//"+file
+    print(orig_file)
+    print(f"num subredes original {n_subredes}")
+    #sk_file = create_new_file(file)#Done cambiar para que lo cree en la misma ubicacion
+    sk_file = ""
+    if file.find(".py") == -1:
+        sk_file = carpeta+"//"+"sk_"+file+".py"
+    else:
+        sk_file = carpeta+"//"+"sk_"+file
+    open(sk_file, "w").close() #python deberia cerrarlo automaticamente, pero queda mas claro asi
+    sk_trees,init_code,post_sk_codes,skynnet_configs = prepare_sk_file(orig_file)
+    print(skynnet_configs)
+    num_sk_blocks = len(skynnet_configs) #Cuantos bloques skynnet hay
+    with open(sk_file,'w') as fo:
+        #escribo el principio
+        fo.write(init_code)
+        fo.write(sk_extra_codes.funciones_combinatorias)
+        for block_number in range(num_sk_blocks):
+            code = sk_trees[block_number]
+            num_subredes,prediction_nombre,nodos_post_predict,predict_data = process_skynnet_code(code, skynnet_configs[block_number], fo, n, block_number)
+            #escribo el final
+            fo.write(post_sk_codes[block_number])
+            fo.write("\n\n")
+            #Escribo la llamada a los modelos del bloque
+            write_sk_block_invocation_code(block_number,fo,skynnet_configs[block_number],prediction_nombre,nodos_post_predict,predict_data)
+        fo.write("\n\n")
+        #Escribo la llamada a todos los bloques
+        write_sk_global_code(num_sk_blocks,fo)
+        fo.write("\n\n")
+    ##Cambiamos indentacion de espacios a tabuladores para cloudbook
+    tab_indent(sk_file)
+    #Se borra el fichero original y dejar el sk_xxx
+    os.remove(orig_file)
 
 def main(test=False):
     '''Procesa el fichero de entrada y genera el de salida'''
